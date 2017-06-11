@@ -1,0 +1,28 @@
+.zones-table {
+    border-collapse: collapse;
+    border-spacing: 0px;
+}
+
+.zones-table-heading {
+    background-color: cornflowerblue;
+}
+
+.zones-table-heading-cell {
+    padding: 10px;
+}
+
+.zones-table-row {
+    border: solid;
+    border-width: 1px 0;
+
+    height: 50px;
+}
+
+.zones-table-row:hover {
+    background-color: grey;
+    cursor: pointer;
+}
+
+.zones-table-cell {
+    text-align: center;
+}
