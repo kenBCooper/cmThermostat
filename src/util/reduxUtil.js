@@ -1,7 +1,11 @@
 import { applyMiddleware, createStore } from 'redux';
-import logger from 'redux-logger';
+import { createLogger } from 'redux-logger';
 import appReducer from '../reducer/AppReducer';
 
 export const initializeStore = () => {
-  return createStore(appReducer, {}, applyMiddleware(logger));
+  const logger = createLogger({
+    collapsed: true,
+  });
+
+  return createStore(appReducer, appReducer.DEFAULT_STATE, applyMiddleware(logger));
 };

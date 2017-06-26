@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
-import { parseDeviceShadow } from '../util/deviceShadowUtil';
 import './ZoneList.css';
+import LoadingIndicator from './LoadingIndicator';
 
 const ZONE_LIST_HEADERS = {
     NAME: 'Name',
@@ -14,40 +14,43 @@ const ZONE_LIST_HEADERS = {
 class ZoneList extends Component {
     mapZonesDataToDisplayGrid(zonesData) {
         let mappedZoneData = [];
-        zonesData.forEach((zoneData) => {
+
+        Object.keys(zonesData).forEach((zoneNumber) => {
             mappedZoneData.push({
-                [ZONE_LIST_HEADERS.NAME]: zoneData.name,
-                [ZONE_LIST_HEADERS.TEMP]: zoneData.temp,
+                [ZONE_LIST_HEADERS.NAME]: zoneNumber,
+                [ZONE_LIST_HEADERS.TEMP]: zonesData[zoneNumber].currentTemp,
                 [ZONE_LIST_HEADERS.OCC_HEAT_COOL_SETPOINTS]: 
-                    zoneData.occupiedHeatSetpoint + ' / ' + zoneData.occupiedCoolSetpoint,
+                    zonesData[zoneNumber].occupiedHeat + ' / ' + zonesData[zoneNumber].occupiedCool,
                 [ZONE_LIST_HEADERS.UNOCC_HEAT_COOL_SETPOINTS]:
-                    zoneData.occupiedHeatSetpoint + ' / ' + zoneData.occupiedCoolSetpoint,
+                    zonesData[zoneNumber].unoccupiedHeat + ' / ' + zonesData[zoneNumber].unoccupiedCool,
             });
-        })
+        });
 
         return mappedZoneData;
     }
 
     openZoneDetail(index) {
-        this.props.history.push(`/${index}`)
+        this.props.history.push(`/${index + 1}`)
     }
 
     render() {
-        console.log(this.props);
-        if (this.props.zones) {
-            const zonesData = this.mapZonesDataToDisplayGrid(this.props.zones);
-            return (
-                <div>
-                    <table className="zones-table">
-                        {this.renderTableHeader(Object.values(ZONE_LIST_HEADERS))}
-                        {this.renderTableBody(zonesData)}
-                    </table>
-                </div>
-            );
+        if (!this.props.connected || !this.props.zones) {
+            return <LoadingIndicator />
         } else {
-            return <div></div>
+            if (this.props.zones) {
+                const zonesData = this.mapZonesDataToDisplayGrid(this.props.zones);
+                return (
+                    <div>
+                        <table className="zones-table">
+                            {this.renderTableHeader(Object.values(ZONE_LIST_HEADERS))}
+                            {this.renderTableBody(zonesData)}
+                        </table>
+                    </div>
+                );
+            } else {
+                return <div></div>
+            }
         }
-
     }
 
     renderTableHeader(headerItems) {
@@ -91,7 +94,8 @@ class ZoneList extends Component {
 
 const mapStateToProps = (state) => {
     return {
-        zones: state.zones,
+        zones: state.shadow.zones,
+        connected: state.connected,
     }
 }
 

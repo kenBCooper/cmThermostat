@@ -2,17 +2,22 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
 import Router from './Router';
-import { receiveDeviceUpdate } from './actions/AppActions';
+import { updateDeviceShadow, setConnectedStatus } from './actions/AppActions';
+import { connectToDeviceShadow } from './util/deviceShadowUtil';
 
 class App extends Component {
+    constructor(props) {
+        super(props);
+        connectToDeviceShadow(
+            props.onDeviceUpdate,
+            props.onSuccessfulDeviceConnection
+        );
+    }
+
     render() {
         return (
             <div>
                 <Router/>
-                <button type="button"
-                        onClick={() => this.props.bootstrapData()}>
-                    Bootstrap data
-                </button>
             </div>
         );
     }
@@ -20,7 +25,8 @@ class App extends Component {
 
 const mapDispatchToProps = (dispatch) => {
     return {
-        bootstrapData: () => dispatch(receiveDeviceUpdate())
+        onDeviceUpdate: (message) => dispatch(updateDeviceShadow(message)),
+        onSuccessfulDeviceConnection: () => dispatch(setConnectedStatus())
     }
 }
 
