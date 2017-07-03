@@ -2,7 +2,8 @@ import * as Actions from '../constants/ActionTypes';
 import { 
     parseDeviceShadow,
     updateRawDeviceShadow,
-    publishDeviceShadowUpdate
+    publishDeviceShadowUpdate,
+    getRawZones,
 } from '../util/deviceShadowUtil';
 
 const DEFAULT_STATE = {
@@ -69,7 +70,7 @@ const updateDeviceShadow = (state, action) => {
     const updatedRawShadow = updateRawDeviceShadow(state.rawShadow, updatedDeviceShadowState);
 
     // Publish an update to the external device shadow using our updated raw state.
-    publishDeviceShadowUpdate(updatedRawShadow);
+    publishDeviceShadowUpdate(updatedRawShadow, updateZoneId);
 
     // Optimistically update local state with changes while update to device shadow
     // is pending.

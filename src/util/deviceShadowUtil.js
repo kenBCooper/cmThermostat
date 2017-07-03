@@ -57,19 +57,21 @@ const DIAGNOSTIC_PARSE_LIST = {
     24: 'systemStatus',
 }
 
-export const publishDeviceShadowUpdate = (updatedShadow) => {
+export const publishDeviceShadowUpdate = (updatedShadow, zoneId) => {
     clearTimeout(publishTimeout);
+    const shadowUpdatePayload = getZoneUpdatePayload(updatedShadow, zoneId);
     publishTimeout = setTimeout(() => {
         const updatePayload = {
             state: {
-                reported: updatedShadow
+                reported: shadowUpdatePayload
             }
         };
+
         mqttClient.publish(UPDATE_TOPIC, JSON.stringify(updatePayload));
     }, PUBLISH_DEBOUNCE_TIME);
 }
 
-// Update raw shadow with new values in the updateShadowObject and publish.
+// Update raw shadow with new values in the updateShadowObject.
 // Return the new raw shadow for storage.
 export const updateRawDeviceShadow = (rawShadow, updateShadowObject) => {
     Object.keys(rawShadow).forEach((key) => {
@@ -147,7 +149,7 @@ export const connectToDeviceShadow = (onUpdate, onSuccess) => {
             mqttClient.publish(UPDATE_TOPIC, BASE_REQUEST_MESSAGE);
             mqttClient.publish(GET_TOPIC);
 
-            // DUMMY FOR WHEN BOARD IS DOWN
+            // // DUMMY FOR WHEN BOARD IS DOWN
             // onUpdate(JSON.parse(`{
             //     "R": "0,0,",
             //     "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
@@ -242,5 +244,21 @@ const parseDiagnosticData = (diagnosticValues) => {
     });
 
     return parsedDiagnosticData;
+}
+
+// Get specific zone update payload, needed so we only send exactly what
+// has updated. Payload size must be kept to a minimum.
+const getZoneUpdatePayload = (rawShadow, zoneId) => {
+    let zoneUpdatePayload = {};
+    Object.keys(rawShadow).forEach((key) => {
+        if (key.charAt(0) === 'S') {
+            const zoneNumber = key.split('S')[1];
+            if (zoneNumber === zoneId) {
+                zoneUpdatePayload[key] = rawShadow[key];
+            }
+        }
+    });
+
+    return zoneUpdatePayload;
 }
 
