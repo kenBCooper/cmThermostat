@@ -2,7 +2,7 @@ import aws from 'aws-sdk';
 import AWSMqtt from 'aws-mqtt-client';
 import awsConfiguration from '../aws-configuration';
 
-const THING_NAME = '5410ec49e4c5';
+const THING_NAME = '5410ec49e580';
 const UPDATE_ACCEPTED_TOPIC = `$aws/things/${THING_NAME}/shadow/update/accepted`;
 const UPDATE_REJECTED_TOPIC = `$aws/things/${THING_NAME}/shadow/update/rejected`;
 const UPDATE_TOPIC = `$aws/things/${THING_NAME}/shadow/update`;
