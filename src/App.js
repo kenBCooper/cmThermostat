@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
 import Router from './Router';
-import { updateDeviceShadow, setConnectedStatus } from './actions/AppActions';
+import { receiveDeviceShadowUpdate, setConnectedStatus } from './actions/AppActions';
 import { connectToDeviceShadow } from './util/deviceShadowUtil';
 
 class App extends Component {
@@ -25,7 +25,7 @@ class App extends Component {
 
 const mapDispatchToProps = (dispatch) => {
     return {
-        onDeviceUpdate: (message) => dispatch(updateDeviceShadow(message)),
+        onDeviceUpdate: (message) => dispatch(receiveDeviceShadowUpdate(message)),
         onSuccessfulDeviceConnection: () => dispatch(setConnectedStatus())
     }
 }

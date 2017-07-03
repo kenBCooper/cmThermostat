@@ -1,6 +1,8 @@
 .zones-table {
     border-collapse: collapse;
     border-spacing: 0px;
+    width: 100%;
+    background-color: aliceblue;
 }
 
 .zones-table-heading {
@@ -9,6 +11,7 @@
 
 .zones-table-heading-cell {
     padding: 10px;
+    text-align: center;
 }
 
 .zones-table-row {
