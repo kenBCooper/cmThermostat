@@ -7,7 +7,7 @@ import {
 import { withRouter } from 'react-router-dom'
 
 class NavHeader extends Component {
-  render(){
+  render() {
     return (
       <Navbar onSelect={(eventKey, event) => this.handleNavigation(eventKey, event)}>
         <Navbar.Header>

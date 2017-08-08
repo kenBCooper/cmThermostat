@@ -23,3 +23,12 @@ export const updateDeviceShadow = (value, updateAttribute, zoneId) => {
     }
   }
 }
+
+export const setUserInfo = (userAttrs) => {
+  return {
+    type: Actions.SET_USER_INFO,
+    payload: {
+      ...userAttrs,
+    }
+  }
+}
