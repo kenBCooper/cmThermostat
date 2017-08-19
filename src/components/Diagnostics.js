@@ -1,5 +1,9 @@
 import React from 'react';
 import { connect } from 'react-redux';
+import { Panel, Table } from 'react-bootstrap';
+
+import './Panel.css';
+import './Table.css';
 
 const STATUS_DISPLAY_STRINGS = {
   0: 'OFF',
@@ -20,27 +24,44 @@ const ZONE_STATUS_DISPLAY_STRINGS = {
 const Diagnostics = (props) => {
   return (
     <div>
-      <h1>System Diagnostics</h1>
-      <br />
-      {props.diagnostics && (
-        <div>
-          <h3>{`Leaving air: ${props.diagnostics.leavingAir}°`}</h3>
-          <h3>{`Return air: ${props.diagnostics.returnAir}°`}</h3>
-          <h3>{`Outside air: ${props.diagnostics.outsideAir}°`}</h3>
-          <br />
-          <h3>{`Main System Status: ${getStatusDisplay(props.diagnostics.systemStatus)}`}</h3>
-          <br />
-          <h3>Thermostat Status</h3>
-          {Object.keys(props.zones).map((zoneId, index) => {
-            const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
-            const zoneStatusDiagnosticCode = props.diagnostics[zoneStatusDiagnosticKey];
-            const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
-            return(
-              <h4 key={index}>{`${zoneId}: ${zoneStatusDisplay}`}</h4>
-            )
-          })}
-        </div>
-      )}
+      <Panel className="custom-panel">
+        {props.diagnostics && (
+          <Table fill className='custom-table'>
+            <thead className='custom-table-heading'>
+              <tr>
+                <th className='custom-table-heading-cell'>System Diagnostics</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>{`Leaving air: ${props.diagnostics.leavingAir}°`}</td></tr>
+              <tr><td>{`Return air: ${props.diagnostics.returnAir}°`}</td></tr>
+              <tr><td>{`Outside air: ${props.diagnostics.outsideAir}°`}</td></tr>
+              <tr><td>{`Main System Status: ${getStatusDisplay(props.diagnostics.systemStatus)}`}</td></tr>
+            </tbody>
+          </Table>
+        )}
+      </Panel>
+      <Panel className="custom-panel">
+        <Table fill className='custom-table'>
+          <thead className='custom-table-heading'>
+            <tr>
+              <th className='custom-table-heading-cell'>Thermostat Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(props.zones).map((zoneId, index) => {
+              const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
+              const zoneStatusDiagnosticCode = props.diagnostics[zoneStatusDiagnosticKey];
+              const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
+              return(
+                <tr key={index}>
+                  <td>{`${zoneId}: ${zoneStatusDisplay}`}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </Table>
+      </Panel>
     </div>
   );
 }

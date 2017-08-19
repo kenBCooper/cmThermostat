@@ -5,6 +5,7 @@ import {
   FormGroup,
   FormControl,
   ControlLabel,
+  Panel,
 } from 'react-bootstrap';
 import {
   CognitoUserPool,
@@ -14,6 +15,7 @@ import {
 import { setUserInfo, receiveDeviceShadowUpdate, setConnectedStatus } from '../actions/AppActions';
 import { connectToDeviceShadow } from '../util/deviceShadowUtil';
 import './Login.css';
+import './Panel.css';
 
 const awsConfig = {
   // Cognito Identity Pool ID
@@ -103,6 +105,8 @@ class Login extends Component {
               this.props.onDeviceUpdate,
               this.props.onSuccessfulDeviceConnection
           );
+
+          this.props.history.push('/1');
         });
     };
 
@@ -113,31 +117,33 @@ class Login extends Component {
 
   render() {
     return (
-      <div className="Login">
-        <form onSubmit={(evt) => this.handleSubmit(evt)}>
-          <FormGroup controlId="username" bsSize="large">
-            <ControlLabel>Email</ControlLabel>
-            <FormControl
-              autoFocus
-              value={this.state.username}
-              onChange={this.handleChange} />
-          </FormGroup>
-          <FormGroup controlId="password" bsSize="large">
-            <ControlLabel>Password</ControlLabel>
-            <FormControl
-              value={this.state.password}
-              onChange={this.handleChange}
-              type="password" />
-          </FormGroup>
-          <Button
-            block
-            bsSize="large"
-            disabled={ ! this.validateForm() }
-            type="submit">
-            Login
-          </Button>
-        </form>
-      </div>
+      <Panel className='custom-panel login-panel'>
+        <div className="Login">
+          <form onSubmit={(evt) => this.handleSubmit(evt)}>
+            <FormGroup controlId="username" bsSize="large">
+              <ControlLabel>Email</ControlLabel>
+              <FormControl
+                autoFocus
+                value={this.state.username}
+                onChange={this.handleChange} />
+            </FormGroup>
+            <FormGroup controlId="password" bsSize="large">
+              <ControlLabel>Password</ControlLabel>
+              <FormControl
+                value={this.state.password}
+                onChange={this.handleChange}
+                type="password" />
+            </FormGroup>
+            <Button
+              block
+              bsSize="large"
+              disabled={ ! this.validateForm() }
+              type="submit">
+              Login
+            </Button>
+          </form>
+        </div>
+      </Panel>
     );
   }
 }

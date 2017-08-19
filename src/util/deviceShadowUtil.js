@@ -2,7 +2,7 @@ import aws from 'aws-sdk';
 import AWSMqtt from 'aws-mqtt-client';
 import awsConfiguration from '../aws-configuration';
 
-let THING_NAME = undefined;
+let thingName = undefined;
 
 const BASE_REQUEST_VALUE = '0,0,';
 const BASE_REQUEST_MESSAGE = `{"state": {"reported":{"R":"${BASE_REQUEST_VALUE}"}}}`;
@@ -54,23 +54,23 @@ const DIAGNOSTIC_PARSE_LIST = {
 }
 
 const setThingName = (macAddress) => {
-  THING_NAME = `5410ec49${macAddress}`;
+  thingName = `5410ec49${macAddress}`;
 }
 
 const updateAcceptedTopicName = () => {
-  return `$aws/things/${THING_NAME}/shadow/update/accepted`;
+  return `$aws/things/${thingName}/shadow/update/accepted`;
 }
 
 const updateRejectedTopicName = () => {
-  return `$aws/things/${THING_NAME}/shadow/update/rejected`;
+  return `$aws/things/${thingName}/shadow/update/rejected`;
 }
 
 const updateTopicName = () => {
-  return `$aws/things/${THING_NAME}/shadow/update`;
+  return `$aws/things/${thingName}/shadow/update`;
 }
 
 const getTopicName = () => {
-  return `$aws/things/${THING_NAME}/shadow/get`;
+  return `$aws/things/${thingName}/shadow/get`;
 }
 
 export const publishDeviceShadowUpdate = (updatedShadow, zoneId) => {
@@ -92,7 +92,7 @@ export const publishDeviceShadowUpdate = (updatedShadow, zoneId) => {
 export const updateRawDeviceShadow = (rawShadow, updateShadowObject) => {
   Object.keys(rawShadow).forEach((key) => {
     if (key.charAt(0) === 'S') {
-      const zoneNumber = parseInt(key.split('S')[1]);
+      const zoneNumber = parseInt(key.split('S')[1], 10);
       const zoneValues = updateShadowObject.zones[zoneNumber];
 
       let rawValues = rawShadow[key];
@@ -129,12 +129,15 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
     const valuesArr = values.split(',');
 
     if (key.charAt(0) === 'S') {
-      const zoneNumber = parseInt(key.split('S')[1]);
+      const zoneNumber = parseInt(key.split('S')[1], 10);
       const zoneData = parseZoneData(valuesArr);
       parsedDeviceShadow.zones[zoneNumber] = zoneData;
     } else if (key === 'D') {
       const diagnosticData = parseDiagnosticData(valuesArr);
       parsedDeviceShadow.diagnostics = diagnosticData;
+    } else if (key === 'DIS') {
+      const discoverData = parseDiscoverData(valuesArr);
+      parsedDeviceShadow.discover = discoverData;
     }
   });
 
@@ -168,17 +171,17 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
       mqttClient.publish(updateTopicName(), BASE_REQUEST_MESSAGE);
       mqttClient.publish(getTopicName());
 
-      // // DUMMY FOR WHEN BOARD IS DOWN
-      // onUpdate(JSON.parse(`{
-      //     "R": "0,0,",
-      //     "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
-      //     "D": "0,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-      //     "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
-      //     "DIS": "1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
-      //     "P": "0,1,2,3,4,",
-      //     "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,0,0,",
-      //     "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,"
-      // }`));
+      // DUMMY FOR WHEN BOARD IS DOWN
+      onUpdate(JSON.parse(`{
+          "R": "0,0,",
+          "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
+          "D": "0,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+          "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
+          "DIS": "1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
+          "P": "0,1,2,3,4,",
+          "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,0,0,",
+          "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,"
+      }`));
     });
 
     mqttClient.on('message', (topic, message) => {
@@ -263,6 +266,12 @@ const parseDiagnosticData = (diagnosticValues) => {
   });
 
   return parsedDiagnosticData;
+}
+
+const parseDiscoverData = (discoverValues) => {
+  return {
+    rmCount: discoverValues[0],
+  };
 }
 
 // Get specific zone update payload, needed so we only send exactly what

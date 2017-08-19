@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Route, Redirect } from 'react-router-dom';
+import { BrowserRouter, Route, Redirect, Switch } from 'react-router-dom';
 import { connect } from 'react-redux';
 
 import ZoneList from './components/ZoneList';
@@ -15,22 +15,27 @@ const Router = (props) => {
         <div>
             { isLoggedIn ? (<NavHeader />) : null}
             <div className="container">
-              <LoggedOutOnlyRoute exact
-                authStatus={isLoggedIn}
-                path="/login"
-                component={Login}/>
-              <PrivateRoute exact
-                authStatus={isLoggedIn}
-                path="/"
-                component={ZoneList}/>
-              <PrivateRoute
-                authStatus={isLoggedIn}
-                path="/d"
-                component={Diagnostics}/>
-              <PrivateRoute
-                authStatus={isLoggedIn}
-                path="/:zoneId"
-                component={ZoneDetail}/>
+              <Switch>
+                <LoggedOutOnlyRoute exact
+                  authStatus={isLoggedIn}
+                  path="/login"
+                  component={Login}/>
+                <PrivateRoute
+                  authStatus={isLoggedIn}
+                  path="/:rmId/d"
+                  component={Diagnostics}/>
+                <PrivateRoute exact
+                  authStatus={isLoggedIn}
+                  path="/:RmId/:zoneId"
+                  component={ZoneDetail}/>
+                <PrivateRoute
+                  authStatus={isLoggedIn}
+                  path="/:rmId"
+                  component={ZoneList}/>
+                <PrivateRoute
+                  authStatus={isLoggedIn}
+                  component={ZoneList}/>
+              </Switch>
             </div>
         </div>
     </BrowserRouter>

@@ -1,0 +1,27 @@
+.custom-table {
+  width: 100%;
+  color: #424B54;
+}
+
+.custom-table-heading {
+  background-color: #93A8AC;
+  border: none;
+}
+
+.custom-table-heading-cell {
+  text-align: center;
+  padding: 10px;
+  border: none !important;
+}
+
+.custom-table-row:hover {
+  cursor: pointer;
+}
+
+.table-hover-color:hover{
+  background-color: #93A8AC;
+}
+
+.custom-table-cell {
+  text-align: center;
+}

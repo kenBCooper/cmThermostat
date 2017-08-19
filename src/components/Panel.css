@@ -1,0 +1,22 @@
+.custom-panel {
+	border-color: #93A8AC;
+	color: #424B54;
+}
+
+.custom-panel .panel-heading {
+	background-color: #93A8AC;
+	font-size: 14px;
+	font-weight: bold;
+	color: #424B54;
+}
+
+.login-panel {
+	width: 450px;
+	margin: 50px auto;
+}
+
+@media only screen and (max-width: 475px) {
+    .login-panel {
+        width: 90%;
+    }
+}

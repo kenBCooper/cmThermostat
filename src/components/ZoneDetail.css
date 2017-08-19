@@ -1,0 +1,41 @@
+.temp-display p {
+	font-size: 24px;
+}
+
+.temp-display p:last-child {
+	font-size: 64px;
+}
+
+@media only screen and (min-width: 991px) {
+    .temp-control-container {
+        width: 75%;
+    }
+}
+
+.temp-control {
+	margin: 5px;
+	margin-bottom: 50px;
+}
+
+/* Custom css rules override defaults for slider component */
+.temp-control .input-range {
+	height: 23px;
+}
+
+.temp-control .input-range__track {
+	height: 8px;
+}
+
+.temp-control .input-range__slider {
+	width: 15px;
+	height: 15px;
+	top: -4px;
+}
+
+.temp-control .input-range__label {
+	font-size: 12px;
+}
+
+.temp-control .input-range__label--value {
+	top: -27px;
+}

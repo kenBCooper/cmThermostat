@@ -3,7 +3,6 @@ import {
   parseDeviceShadow,
   updateRawDeviceShadow,
   publishDeviceShadowUpdate,
-  getRawZones,
 } from '../util/deviceShadowUtil';
 
 const DEFAULT_STATE = {
@@ -18,6 +17,7 @@ const DEFAULT_STATE = {
   shadow: {
     zones: undefined,
     diagnostics: undefined,
+    discover: undefined,
   }
 };
 
@@ -52,11 +52,24 @@ const receiveDeviceShadowUpdate = (state, action) => {
 
   return {
     ...state,
-    rawShadow: Object.assign({}, state.rawShadow, rawUpdatedShadowState),
+    rawShadow: {
+      ...state.rawShadow,
+      ...rawUpdatedShadowState,
+    },
     shadow: {
       ...state.shadow,
-      zones: Object.assign({}, state.shadow.zones, updatedShadowState.zones),
-      diagnostics: Object.assign({}, state.shadow.diagnostics, updatedShadowState.diagnostics),
+      zones: {
+        ...state.shadow.zones,
+        ...updatedShadowState.zones
+      },
+      diagnostics: {
+        ...state.shadow.diagnostics,
+        ...updatedShadowState.diagnostics,
+      },
+      discover: {
+        ...state.shadow.discover,
+        ...updatedShadowState.discover,
+      }
     }
   }
 }
