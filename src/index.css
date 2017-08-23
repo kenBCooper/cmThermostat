@@ -11,3 +11,11 @@ body {
 	background-repeat: no-repeat;
     background-attachment: fixed;
 }
+
+.bold {
+	font-weight: bold;
+}
+
+.greyscale {
+	filter: grayscale(100%);
+}

@@ -5,12 +5,16 @@ import { Panel, Table } from 'react-bootstrap';
 import './Table.css';
 import './Panel.css';
 import LoadingIndicator from './LoadingIndicator';
+import { getZonesForCurrentSystem } from '../util/deviceShadowUtil';
+import ThermostatActionIcon from './ThermostatActionIcon';
 
 const ZONE_LIST_HEADERS = {
     ZONE: 'Zone',
     TEMP: 'Temp',
+    CURR_ACTION: 'Action',
     OCC_HEAT_COOL_SETPOINTS: 'Occupied Heat / Cool',
     UNOCC_HEAT_COOL_SETPOINTS: 'Unoccupied Heat / Cool',
+    SA_STAT: 'SA Stat',
 }
 
 class ZoneList extends Component {
@@ -21,14 +25,46 @@ class ZoneList extends Component {
       mappedZoneData.push({
         [ZONE_LIST_HEADERS.ZONE]: zoneNumber,
         [ZONE_LIST_HEADERS.TEMP]: zonesData[zoneNumber].currentTemp,
-        [ZONE_LIST_HEADERS.OCC_HEAT_COOL_SETPOINTS]: 
-          zonesData[zoneNumber].occupiedHeat + ' / ' + zonesData[zoneNumber].occupiedCool,
+        [ZONE_LIST_HEADERS.CURR_ACTION]:
+          this.formatActionDisplay(zonesData[zoneNumber]),
+        [ZONE_LIST_HEADERS.OCC_HEAT_COOL_SETPOINTS]:
+          this.formatOccupiedSetpoints(
+            zonesData[zoneNumber].occupiedHeat,
+            zonesData[zoneNumber].occupiedCool,
+            zonesData[zoneNumber].occupiedStatus
+          ),
         [ZONE_LIST_HEADERS.UNOCC_HEAT_COOL_SETPOINTS]:
-          zonesData[zoneNumber].unoccupiedHeat + ' / ' + zonesData[zoneNumber].unoccupiedCool,
+          this.formatUnoccupiedSetpoints(
+            zonesData[zoneNumber].unoccupiedHeat,
+            zonesData[zoneNumber].unoccupiedCool,
+            zonesData[zoneNumber].occupiedStatus
+          ),
+        [ZONE_LIST_HEADERS.SA_STAT]:
+          zonesData[zoneNumber].standaloneThermostat === '2' ? 'Y' : 'N',
       });
     });
 
     return mappedZoneData;
+  }
+
+  formatActionDisplay(zoneData) {
+    return <ThermostatActionIcon small zoneData={zoneData}/>;
+  }
+
+  formatOccupiedSetpoints(heatPoint, coolPoint, isOccupied) {
+    return (
+      <div className={isOccupied === '1' ? 'bold' : ''}>
+        {heatPoint} / {coolPoint}
+      </div>
+    );
+  }
+
+  formatUnoccupiedSetpoints(heatPoint, coolPoint, isOccupied) {
+    return (
+      <div className={isOccupied === '0' ? 'bold' : ''}>
+        {heatPoint} / {coolPoint}
+      </div>
+    );
   }
 
   openZoneDetail(index) {
@@ -37,11 +73,13 @@ class ZoneList extends Component {
   }
 
   render() {
-    if (!this.props.connected || !this.props.zones) {
+    const zones = getZonesForCurrentSystem(this.props.deviceShadow);
+
+    if (!this.props.connected || !zones) {
       return <LoadingIndicator />
     } else {
-      if (this.props.zones) {
-        const zonesData = this.mapZonesDataToDisplayGrid(this.props.zones);
+      if (zones) {
+        const zonesData = this.mapZonesDataToDisplayGrid(zones);
         return (
           <Panel className="custom-panel">
             <Table fill className="custom-table">
@@ -98,7 +136,7 @@ class ZoneList extends Component {
 
 const mapStateToProps = (state) => {
   return {
-    zones: state.shadow.zones,
+    deviceShadow: state.shadow,
     connected: state.connected,
   }
 }

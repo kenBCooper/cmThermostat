@@ -30,13 +30,20 @@ const awsConfig = {
   macAttrName: 'custom:mac',
 };
 
+const LOGIN_SUCCESS_REDIRECT = '/0';
+
 class Login extends Component {
   constructor(props) {
     super(props);
 
+    // For testing
+    // this.state = {
+    //   username: 'kev.r.cox90+test1@gmail.com',
+    //   password: 'Kevin1..',
+    // };
     this.state = {
-      username: 'kev.r.cox90+test1@gmail.com',
-      password: 'Kevin1..',
+      username: '',
+      password: '',
     };
   }
 
@@ -70,7 +77,7 @@ class Login extends Component {
       && this.state.password.length > 0;
   }
 
-  handleChange(event) {
+  handleChange = (event) => {
     this.setState({
       [event.target.id]: event.target.value
     });
@@ -106,7 +113,7 @@ class Login extends Component {
               this.props.onSuccessfulDeviceConnection
           );
 
-          this.props.history.push('/1');
+          this.props.history.push(LOGIN_SUCCESS_REDIRECT);
         });
     };
 

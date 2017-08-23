@@ -1,8 +1,9 @@
-.temp-display p {
+.occupied-status-display {
 	font-size: 24px;
+	color: #93A8AC;
 }
 
-.temp-display p:last-child {
+.temp-display p {
 	font-size: 64px;
 }
 
@@ -39,3 +40,13 @@
 .temp-control .input-range__label--value {
 	top: -27px;
 }
+
+.input-range__slider-container:first-of-type .input-range__slider {
+	background-color: #ec1010;
+	border-color: #ec1010;
+}
+
+.input-range__track--active {
+	background-color: #424B54;
+}
+

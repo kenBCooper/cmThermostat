@@ -1,11 +1,10 @@
 import aws from 'aws-sdk';
 import AWSMqtt from 'aws-mqtt-client';
+
 import awsConfiguration from '../aws-configuration';
+import { getCurrentSystem } from './urlUtil';
 
 let thingName = undefined;
-
-const BASE_REQUEST_VALUE = '0,0,';
-const BASE_REQUEST_MESSAGE = `{"state": {"reported":{"R":"${BASE_REQUEST_VALUE}"}}}`;
 
 // 3 sec debounce.
 const PUBLISH_DEBOUNCE_TIME = 3000;
@@ -24,6 +23,8 @@ const STAT_PARSE_LIST = {
   6: 'unoccupiedHeat',
   53: 'zoneStatus',
   54: 'zoneCall',
+  56: 'standaloneThermostat',
+  60: 'occupiedStatus',
 };
 
 const DIAGNOSTIC_PARSE_LIST = {
@@ -54,7 +55,11 @@ const DIAGNOSTIC_PARSE_LIST = {
 }
 
 const setThingName = (macAddress) => {
-  thingName = `5410ec49${macAddress}`;
+  // All 4 digit mac addresses will have a 9 hard-coded before their 
+  if (macAddress.length === 4) {
+    macAddress = `9${macAddress}`;
+  }
+  thingName = `5410ec4${macAddress}`;
 }
 
 const updateAcceptedTopicName = () => {
@@ -71,6 +76,10 @@ const updateTopicName = () => {
 
 const getTopicName = () => {
   return `$aws/things/${thingName}/shadow/get`;
+}
+
+const createBaseRequestMessage = (systemNumber) => {
+  return `{"state": {"reported":{"R":"${systemNumber},0,"}}}`;
 }
 
 export const publishDeviceShadowUpdate = (updatedShadow, zoneId) => {
@@ -121,6 +130,7 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
     diagnostics: {},
   };
 
+  let systemNumber;
   Object.keys(rawDeviceShadow).forEach((key) => {
     let values = rawDeviceShadow[key];
     if (values.charAt(values.length - 1) === ',') {
@@ -132,15 +142,24 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
       const zoneNumber = parseInt(key.split('S')[1], 10);
       const zoneData = parseZoneData(valuesArr);
       parsedDeviceShadow.zones[zoneNumber] = zoneData;
+      systemNumber = valuesArr[0];
     } else if (key === 'D') {
       const diagnosticData = parseDiagnosticData(valuesArr);
       parsedDeviceShadow.diagnostics = diagnosticData;
+      systemNumber = valuesArr[0];
     } else if (key === 'DIS') {
       const discoverData = parseDiscoverData(valuesArr);
       parsedDeviceShadow.discover = discoverData;
+    } else {
+      // It is important to always have the relevant system number, even if we have
+      // an update containing an unexpected key.
+      systemNumber = valuesArr[0];
     }
   });
 
+  // The system number that the shadow pertains to will be included as the first value
+  // in S/D/other data sent over the wire.
+  parsedDeviceShadow.systemNumber = systemNumber;
   return parsedDeviceShadow;
 }
 
@@ -168,20 +187,20 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
         initialConnection = true;
       }
 
-      mqttClient.publish(updateTopicName(), BASE_REQUEST_MESSAGE);
+      mqttClient.publish(updateTopicName(), createBaseRequestMessage(0));
       mqttClient.publish(getTopicName());
 
       // DUMMY FOR WHEN BOARD IS DOWN
-      onUpdate(JSON.parse(`{
-          "R": "0,0,",
-          "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
-          "D": "0,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-          "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
-          "DIS": "1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
-          "P": "0,1,2,3,4,",
-          "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,0,0,",
-          "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,"
-      }`));
+      // onUpdate(JSON.parse(`{
+      //     "R": "0,0,",
+      //     "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
+      //     "D": "0,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+      //     "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
+      //     "DIS": "1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
+      //     "P": "0,1,2,3,4,",
+      //     "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,0,0,",
+      //     "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,"
+      // }`));
     });
 
     mqttClient.on('message', (topic, message) => {
@@ -198,9 +217,11 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
           if (Object.keys(updatedShadowState).every((key) => {
             return updatedShadowState[key] === null;
           })) return;
-          // Do not update local state if the server is achknowledging a base request.
-          // Subsequent requests will contain the device shadow data needed.
-          if (updatedShadowState.R === BASE_REQUEST_VALUE) return;
+          // Do not update local state if the server is acknowledging a base request.
+          // Subsequent requests will contain the device shadow data needed. We know the server
+          // is responding to a base request if there is a R key in the payload with a value of:
+          // "<number>,0," - which is what the regex below tests for.
+          if (!!/[0-9]+,0,/.exec(updatedShadowState.R)) return;
 
           onUpdate(updatedShadowState);
         }
@@ -288,5 +309,35 @@ const getZoneUpdatePayload = (rawShadow, zoneId) => {
   });
 
   return zoneUpdatePayload;
+}
+
+// Given a device shadow object, return the zones that apply to the currently displayed
+// system (GenX or RM).
+export const getZonesForCurrentSystem = (deviceShadow) => {
+  const systemNumber = getCurrentSystem();
+  const currentSystem = deviceShadow[systemNumber];
+  if (currentSystem) {
+    return currentSystem.zones
+  } else {
+    requestDeviceShadowForSystem(systemNumber);
+    return undefined;
+  }
+}
+
+// Given a device shadow object, return the diagnostic data that applies to the currently displayed
+// system (GenX or RM).
+export const getDiagnosticForCurrentSystem = (deviceShadow) => {
+  const systemNumber = getCurrentSystem();
+  const currentSystem = deviceShadow[systemNumber];
+  if (currentSystem) {
+    return currentSystem.diagnostics
+  } else {
+    requestDeviceShadowForSystem(systemNumber);
+    return undefined;
+  }
+}
+
+const requestDeviceShadowForSystem = (systemNumber) => {
+  mqttClient.publish(updateTopicName(), createBaseRequestMessage(systemNumber));
 }
 

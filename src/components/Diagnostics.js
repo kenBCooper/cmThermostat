@@ -2,6 +2,12 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { Panel, Table } from 'react-bootstrap';
 
+import LoadingIndicator from './LoadingIndicator';
+import { 
+  getDiagnosticForCurrentSystem,
+  getZonesForCurrentSystem
+} from '../util/deviceShadowUtil';
+
 import './Panel.css';
 import './Table.css';
 
@@ -22,48 +28,54 @@ const ZONE_STATUS_DISPLAY_STRINGS = {
 }
 
 const Diagnostics = (props) => {
-  return (
-    <div>
-      <Panel className="custom-panel">
-        {props.diagnostics && (
+  const diagnostics = getDiagnosticForCurrentSystem(props.deviceShadow);
+  const zones = getZonesForCurrentSystem(props.deviceShadow)
+  if (!diagnostics || !zones) {
+    return <LoadingIndicator />;
+  } else {
+    return (
+      <div>
+        <Panel className="custom-panel">
+          {diagnostics && (
+            <Table fill className='custom-table'>
+              <thead className='custom-table-heading'>
+                <tr>
+                  <th className='custom-table-heading-cell'>System Diagnostics</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>{`Leaving air: ${diagnostics.leavingAir}°`}</td></tr>
+                <tr><td>{`Return air: ${diagnostics.returnAir}°`}</td></tr>
+                <tr><td>{`Outside air: ${diagnostics.outsideAir}°`}</td></tr>
+                <tr><td>{`Main System Status: ${getStatusDisplay(diagnostics.systemStatus)}`}</td></tr>
+              </tbody>
+            </Table>
+          )}
+        </Panel>
+        <Panel className="custom-panel">
           <Table fill className='custom-table'>
             <thead className='custom-table-heading'>
               <tr>
-                <th className='custom-table-heading-cell'>System Diagnostics</th>
+                <th className='custom-table-heading-cell'>Thermostat Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>{`Leaving air: ${props.diagnostics.leavingAir}°`}</td></tr>
-              <tr><td>{`Return air: ${props.diagnostics.returnAir}°`}</td></tr>
-              <tr><td>{`Outside air: ${props.diagnostics.outsideAir}°`}</td></tr>
-              <tr><td>{`Main System Status: ${getStatusDisplay(props.diagnostics.systemStatus)}`}</td></tr>
+              {Object.keys(zones).map((zoneId, index) => {
+                const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
+                const zoneStatusDiagnosticCode = diagnostics[zoneStatusDiagnosticKey];
+                const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
+                return(
+                  <tr key={index}>
+                    <td>{`${zoneId}: ${zoneStatusDisplay}`}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </Table>
-        )}
-      </Panel>
-      <Panel className="custom-panel">
-        <Table fill className='custom-table'>
-          <thead className='custom-table-heading'>
-            <tr>
-              <th className='custom-table-heading-cell'>Thermostat Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.keys(props.zones).map((zoneId, index) => {
-              const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
-              const zoneStatusDiagnosticCode = props.diagnostics[zoneStatusDiagnosticKey];
-              const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
-              return(
-                <tr key={index}>
-                  <td>{`${zoneId}: ${zoneStatusDisplay}`}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </Table>
-      </Panel>
-    </div>
-  );
+        </Panel>
+      </div>
+    );
+  }
 }
 
 const getStatusDisplay = (statusCode) => {
@@ -72,8 +84,8 @@ const getStatusDisplay = (statusCode) => {
 
 const mapStateToProps = (state) => {
     return {
-        diagnostics: state.shadow.diagnostics,
-        zones: state.shadow.zones,
+        deviceShadow: state.shadow,
     }
 };
+
 export default connect(mapStateToProps)(Diagnostics);

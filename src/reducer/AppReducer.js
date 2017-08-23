@@ -4,10 +4,13 @@ import {
   updateRawDeviceShadow,
   publishDeviceShadowUpdate,
 } from '../util/deviceShadowUtil';
+import { getCurrentSystem } from '../util/urlUtil';
 
 const DEFAULT_STATE = {
   connected: false,
-  rawShadow: undefined,
+  rawShadow: {
+     0: undefined,
+  },
   user: {
     accessToken: undefined,
     idToken: undefined,
@@ -15,9 +18,11 @@ const DEFAULT_STATE = {
     mac: undefined,
   },
   shadow: {
-    zones: undefined,
-    diagnostics: undefined,
-    discover: undefined,
+    0: {
+      zones: undefined,
+      diagnostics: undefined,
+      discover: undefined,
+    },
   }
 };
 
@@ -49,28 +54,58 @@ const setUserInfo = (state, action) => {
 const receiveDeviceShadowUpdate = (state, action) => {
   const rawUpdatedShadowState = action.payload;
   const updatedShadowState = parseDeviceShadow(action.payload);
+  const systemNumber = parseInt(updatedShadowState.systemNumber, 10);
+
+  let newShadow;
+  // Merge any new shadow updates with the currently known data.
+  if (state.shadow[systemNumber]) {
+    newShadow = {
+      ...state.shadow,
+      [systemNumber]: {
+        ...state.shadow[systemNumber],
+        zones: {
+          ...state.shadow[systemNumber].zones,
+          ...updatedShadowState.zones
+        },
+        diagnostics: {
+          ...state.shadow[systemNumber].diagnostics,
+          ...updatedShadowState.diagnostics,
+        },
+        discover: {
+          ...state.shadow[systemNumber].discover,
+          ...updatedShadowState.discover,
+        }
+      } 
+    }
+  // If shadow data for a new system is being added for the first time,
+  // we have no old data to merge with it.
+  } else {
+    newShadow = {
+      ...state.shadow,
+      [systemNumber]: {
+        zones: {
+          ...updatedShadowState.zones
+        },
+        diagnostics: {
+          ...updatedShadowState.diagnostics,
+        },
+        discover: {
+          ...updatedShadowState.discover,
+        }
+      } 
+    }
+  }
 
   return {
     ...state,
     rawShadow: {
       ...state.rawShadow,
-      ...rawUpdatedShadowState,
-    },
-    shadow: {
-      ...state.shadow,
-      zones: {
-        ...state.shadow.zones,
-        ...updatedShadowState.zones
-      },
-      diagnostics: {
-        ...state.shadow.diagnostics,
-        ...updatedShadowState.diagnostics,
-      },
-      discover: {
-        ...state.shadow.discover,
-        ...updatedShadowState.discover,
+      [systemNumber]: {
+        ...state.rawShadow[systemNumber],
+        ...rawUpdatedShadowState,
       }
-    }
+    },
+    shadow: newShadow,
   }
 }
 
@@ -85,20 +120,25 @@ const updateDeviceShadow = (state, action) => {
   const updateValue = action.payload.value;
   const updateAttribute = action.payload.updateAttribute;
   const updateZoneId = action.payload.zoneId;
+  const currentSystem = getCurrentSystem();
 
   const updatedDeviceShadowState = {
     ...state.shadow,
-    zones: {
-      ...state.shadow.zones,
-      [updateZoneId]: {
-        ...state.shadow.zones[updateZoneId],
-        [updateAttribute]: updateValue,
+    [currentSystem]: {
+      ...state.shadow[currentSystem],
+      zones: {
+        ...state.shadow[currentSystem].zones,
+        [updateZoneId]: {
+          ...state.shadow[currentSystem].zones[updateZoneId],
+          [updateAttribute]: updateValue,
+        }
       }
     }
   };
 
   // Update the raw device shadow.
-  const updatedRawShadow = updateRawDeviceShadow(state.rawShadow, updatedDeviceShadowState);
+  const updatedRawShadow = updateRawDeviceShadow(
+    state.rawShadow[currentSystem], updatedDeviceShadowState[currentSystem]);
 
   // Publish an update to the external device shadow using our updated raw state.
   publishDeviceShadowUpdate(updatedRawShadow, updateZoneId);
@@ -107,7 +147,10 @@ const updateDeviceShadow = (state, action) => {
   // is pending.
   return {
     ...state,
-    rawShadow: updatedRawShadow,
+    rawShadow: {
+      ...state.rawShadow,
+      [currentSystem]: updatedRawShadow,
+    },
     shadow: updatedDeviceShadowState,
   }
 }

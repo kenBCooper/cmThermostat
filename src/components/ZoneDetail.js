@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import InputRange from 'react-input-range';
-import { Panel, Table } from 'react-bootstrap';
+import { Panel } from 'react-bootstrap';
 
 import { updateDeviceShadow } from '../actions/AppActions';
 import LoadingIndicator from './LoadingIndicator';
+import { getZonesForCurrentSystem } from '../util/deviceShadowUtil';
+import ThermostatActionIcon from './ThermostatActionIcon';
 
 import 'react-input-range/lib/css/index.css';
 import './ZoneDetail.css';
@@ -16,18 +18,24 @@ const MAX_TEMP = 100;
 class ZoneDetail extends Component {
   state={}
   render() {
-    const zoneId = this.props.match.params.zoneId;
-    if (!(parseInt(zoneId, 10) >= 0 || parseInt(zoneId, 10) <= 20)) {
+    const zoneId = parseInt(this.props.match.params.zoneId, 10);
+    if (zoneId < 0 || zoneId > 20) {
       return null;
     }
 
-    if (this.props.zones && this.props.zones[zoneId]) {
-      const zoneData = this.props.zones[zoneId];
+    const zones = getZonesForCurrentSystem(this.props.deviceShadow);
+    if (zones && zones[zoneId]) {
+      const zoneData = zones[zoneId];
       return (
         <Panel className='custom-panel' header={`Zone ${zoneId}`}>
+          <div className='occupied-status-display'>
+            <p>Currently {zoneData.occupiedStatus === '1' ? 'Occupied' : 'Unoccupied'}</p>
+          </div>
           <div className='temp-display'>
-            <p>Current Temp:</p>
-            <p>{zoneData.currentTemp}°</p>
+            <p>
+              {zoneData.currentTemp}°
+              <ThermostatActionIcon zoneData={zoneData} />
+            </p>
           </div>
           {this.renderTempSetpoints(zoneData)}
         </Panel>
@@ -88,7 +96,7 @@ class ZoneDetail extends Component {
 
 const mapStateToProps = (state) => {
   return {
-    zones: state.shadow.zones,
+    deviceShadow: state.shadow,
   }
 };
 

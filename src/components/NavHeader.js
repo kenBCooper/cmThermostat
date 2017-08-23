@@ -9,29 +9,30 @@ import {
 } from 'react-bootstrap';
 import { withRouter } from 'react-router-dom'
 
+import { getCurrentSystem } from '../util/urlUtil'; 
+
 class NavHeader extends Component {
   render() {
-    const urlParts = this.props.location.pathname.split('/');
-    const currentRm = urlParts[1] || 1;
+    const currentSystem = getCurrentSystem();
 
     return (
       <Navbar onSelect={(eventKey, event) => this.handleNavigation(eventKey, event)}>
       <Nav>
         {this.renderGenxDropdown()}
-        <NavItem href={`/${currentRm}`} eventKey={1}>Zones</NavItem>
-        <NavItem href={`/${currentRm}/d`} eventKey={2}>Diagnostics</NavItem>
+        <NavItem href={`/${currentSystem}`} eventKey={1}>Zones</NavItem>
+        <NavItem href={`/${currentSystem}/d`} eventKey={2}>Diagnostics</NavItem>
       </Nav>
       </Navbar>
     );
   }
 
   renderGenxDropdown() {
-    if (this.props.rmCount === 0) {
-      return <NavItem href="/1" eventKey={1}>GenX</NavItem>
+    if (this.getRmCount() === 0) {
+      return <NavItem href="/0" eventKey={1}>GenX</NavItem>
     } else {
       return (
-        <NavDropdown eventKey="1" title="GenX" id="genx-dropdown">
-          <MenuItem eventKey="1.1">System 1</MenuItem>
+        <NavDropdown title="GenX" id="genx-dropdown">
+          <MenuItem href = "/0" eventKey="0">GenX</MenuItem>
           {this.renderGenxDropdownMenuItems()}
         </NavDropdown>
       );
@@ -40,9 +41,12 @@ class NavHeader extends Component {
 
   renderGenxDropdownMenuItems() {
     let menuItems = [];
-    for (let i=0; i < this.props.rmCount; i++) {
-      const key = `1.${i + 2}`;
-      menuItems.push(<MenuItem key={key} eventKey={key}>{`System ${i+2}`}</MenuItem>)
+    for (let i=0; i < this.getRmCount(); i++) {
+      menuItems.push(
+        <MenuItem href={`/${i+1}`} key={i + 1} eventKey={i + 1}>
+          {`RM${i+1}`}
+        </MenuItem>
+      );
     }
     return menuItems;
   }
@@ -51,20 +55,20 @@ class NavHeader extends Component {
     event.preventDefault();
     this.props.history.push(event.target.pathname)
   }
+
+  getRmCount = () => {
+    // Discover data is universal, so we can always rely on the discover data in genx (system 0)
+    // to be true for all systems (RMs).
+    const currentDiscoverData = this.props.deviceShadow[0] && 
+      this.props.deviceShadow[0].discover;
+    return currentDiscoverData ? parseInt(currentDiscoverData.rmCount, 10) : 0;
+  }
 }
 
 const mapStateToProps = (state) => {
   return {
-    rmCount: state.shadow.discover ? parseInt(state.shadow.discover.rmCount, 10) : 0,
+    deviceShadow: state.shadow,
   }
 }
 
 export default withRouter(connect(mapStateToProps, undefined)(NavHeader));
-
-        // <NavDropdown eventKey="4" title="Dropdown" id="nav-dropdown">
-        //   <MenuItem eventKey="4.1">Action</MenuItem>
-        //   <MenuItem eventKey="4.2">Another action</MenuItem>
-        //   <MenuItem eventKey="4.3">Something else here</MenuItem>
-        //   <MenuItem divider />
-        //   <MenuItem eventKey="4.4">Separated link</MenuItem>
-        // </NavDropdown>
