@@ -40,7 +40,7 @@ class ZoneList extends Component {
             zonesData[zoneNumber].occupiedStatus
           ),
         [ZONE_LIST_HEADERS.SA_STAT]:
-          zonesData[zoneNumber].standaloneThermostat === '2' ? 'Y' : 'N',
+          zonesData[zoneNumber].standaloneThermostat === '1' ? 'Y' : 'N',
       });
     });
 

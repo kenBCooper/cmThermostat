@@ -19,7 +19,7 @@ class ThermostatActionIcon extends Component {
     const currentTemp = zoneData.currentTemp;
     const heatPoint = zoneData.occupiedStatus === '1' ? zoneData.occupiedHeat : zoneData.unoccupiedHeat;
     const coolPoint = zoneData.occupiedStatus === '1' ? zoneData.occupiedCool : zoneData.unoccupiedCool;
-    const standaloneThermostat = zoneData.standaloneThermostat === '2';
+    const standaloneThermostat = zoneData.standaloneThermostat === '1';
 
     const diagnostics = getDiagnosticForCurrentSystem(this.props.deviceShadow);
     if (currentTemp < heatPoint) {
