@@ -9,18 +9,19 @@ import {
 } from 'react-bootstrap';
 import { withRouter } from 'react-router-dom'
 
-import { getCurrentSystem } from '../util/urlUtil'; 
+import { getCurrentSystemNumber } from '../util/urlUtil'; 
 
 class NavHeader extends Component {
   render() {
-    const currentSystem = getCurrentSystem();
+    const currentSystemNumber = getCurrentSystemNumber();
 
     return (
       <Navbar onSelect={(eventKey, event) => this.handleNavigation(eventKey, event)}>
       <Nav>
         {this.renderGenxDropdown()}
-        <NavItem href={`/${currentSystem}`} eventKey={1}>Zones</NavItem>
-        <NavItem href={`/${currentSystem}/d`} eventKey={2}>Diagnostics</NavItem>
+        <NavItem href={`/${currentSystemNumber}`} eventKey={1}>Zones</NavItem>
+        <NavItem href={`/${currentSystemNumber}/d`} eventKey={2}>Diagnostics</NavItem>
+        <NavItem href={`/${currentSystemNumber}/s`} eventKey={2}>Schedule</NavItem>
       </Nav>
       </Navbar>
     );

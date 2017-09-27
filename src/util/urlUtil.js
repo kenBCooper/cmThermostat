@@ -2,7 +2,7 @@ const MAX_SYSTEM_COUNT = 20;
 
 // Looks for the currently active system based on the current url. must be between 0-19.
 // uses the following pattern: genx.com/<SYSTEM_NUMBER>/anything/else/123
-export const getCurrentSystem = () => {
+export const getCurrentSystemNumber = () => {
   const pathParts = window.location.pathname.split('/');
   const parsedSystemNumber = parseInt(pathParts[1], 10);
 

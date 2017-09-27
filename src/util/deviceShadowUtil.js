@@ -1,58 +1,17 @@
 import aws from 'aws-sdk';
 import AWSMqtt from 'aws-mqtt-client';
 
-import awsConfiguration from '../aws-configuration';
-import { getCurrentSystem } from './urlUtil';
-
-let thingName = undefined;
+import { awsConfig } from '../aws-configuration';
+import { getCurrentSystemNumber } from './urlUtil';
+import { STAT_PARSE_LIST, DIAGNOSTIC_PARSE_LIST } from './deviceShadowParseConfig';
+import { DAY_NAMES, AM_PM_VALUES } from '../constants/ScheduleConstants';
 
 // 3 sec debounce.
 const PUBLISH_DEBOUNCE_TIME = 3000;
 
+let thingName = undefined;
 let mqttClient;
 let publishTimeout;
-
-// Describes how to parse the device shadow value list:
-//{[value index]: 'value meaning'}
-const STAT_PARSE_LIST = {
-  1: 'lockStatus',
-  2: 'currentTemp',
-  3: 'occupiedCool',
-  4: 'occupiedHeat',
-  5: 'unoccupiedCool',
-  6: 'unoccupiedHeat',
-  53: 'zoneStatus',
-  54: 'zoneCall',
-  56: 'standaloneThermostat',
-  60: 'occupiedStatus',
-};
-
-const DIAGNOSTIC_PARSE_LIST = {
-  1: 'leavingAir',
-  2: 'returnAir',
-  3: 'outsideAir',
-  4: 'errorCodeZone1',
-  5: 'errorCodeZone2',
-  6: 'errorCodeZone3',
-  7: 'errorCodeZone4',
-  8: 'errorCodeZone5',
-  9: 'errorCodeZone6',
-  10: 'errorCodeZone7',
-  11: 'errorCodeZone8',
-  12: 'errorCodeZone9',
-  13: 'errorCodeZone10',
-  14: 'errorCodeZone11',
-  15: 'errorCodeZone12',
-  16: 'errorCodeZone13',
-  17: 'errorCodeZone14',
-  18: 'errorCodeZone15',
-  19: 'errorCodeZone16',
-  20: 'errorCodeZone17',
-  21: 'errorCodeZone18',
-  22: 'errorCodeZone19',
-  23: 'errorCodeZone20',
-  24: 'systemStatus',
-}
 
 const setThingName = (macAddress) => {
   // All 4 digit mac addresses will have a 9 hard-coded before their 
@@ -174,8 +133,8 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
       accessKeyId: credentials.AccessKeyId,
       secretAccessKey: credentials.SecretKey,
       sessionToken: credentials.SessionToken,
-      endpointAddress: awsConfiguration.endpoint,
-      region: awsConfiguration.region,
+      endpointAddress: awsConfig.endpoint,
+      region: awsConfig.region,
     });
 
     mqttClient.on('connect', () => {
@@ -192,14 +151,19 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
 
       // DUMMY FOR WHEN BOARD IS DOWN
       // onUpdate(JSON.parse(`{
-      //     "R": "0,0,",
-      //     "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
-      //     "D": "0,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-      //     "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
-      //     "DIS": "1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
-      //     "P": "0,1,2,3,4,",
-      //     "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,0,0,",
-      //     "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,"
+      //   "R": "0,0,",
+      //   "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
+      //   "D": "0,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+      //   "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
+      //   "DIS": "3,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
+      //   "P": "0,1,2,3,4,",
+      //   "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,0,0,",
+      //   "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,",
+      //   "S3": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,",
+      //   "S4": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,",
+      //   "S5": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,",
+      //   "S6": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,",
+      //   "S7": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,0,0,"
       // }`));
     });
 
@@ -234,10 +198,10 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
 
 const configureCognitoId = (onSuccess) => {
   // Initialize our configuration.
-  aws.config.region = awsConfiguration.region;
+  aws.config.region = awsConfig.region;
 
   aws.config.credentials = new aws.CognitoIdentityCredentials({
-    IdentityPoolId: awsConfiguration.poolId
+    IdentityPoolId: awsConfig.poolId
   });
 
   // Attempt to authenticate to the Cognito Identity Pool.  Note that this
@@ -314,7 +278,7 @@ const getZoneUpdatePayload = (rawShadow, zoneId) => {
 // Given a device shadow object, return the zones that apply to the currently displayed
 // system (GenX or RM).
 export const getZonesForCurrentSystem = (deviceShadow) => {
-  const systemNumber = getCurrentSystem();
+  const systemNumber = getCurrentSystemNumber();
   const currentSystem = deviceShadow[systemNumber];
   if (currentSystem) {
     return currentSystem.zones
@@ -327,7 +291,7 @@ export const getZonesForCurrentSystem = (deviceShadow) => {
 // Given a device shadow object, return the diagnostic data that applies to the currently displayed
 // system (GenX or RM).
 export const getDiagnosticForCurrentSystem = (deviceShadow) => {
-  const systemNumber = getCurrentSystem();
+  const systemNumber = getCurrentSystemNumber();
   const currentSystem = deviceShadow[systemNumber];
   if (currentSystem) {
     return currentSystem.diagnostics
@@ -335,6 +299,51 @@ export const getDiagnosticForCurrentSystem = (deviceShadow) => {
     requestDeviceShadowForSystem(systemNumber);
     return undefined;
   }
+}
+
+export const getSchedulesForCurrentSystem = (deviceShadow) => {
+  const systemNumber = getCurrentSystemNumber();
+  const currentSystem = deviceShadow[systemNumber];
+  let systemSchedules = {};
+  Object.keys(currentSystem.zones).forEach((zoneNumber) => {
+    systemSchedules[zoneNumber] = getSchedulesForZone(currentSystem.zones[zoneNumber]);
+  });
+
+  return systemSchedules;
+}
+
+const getSchedulesForZone = (zone) => {
+  let zoneSchedule = {};
+  Object.keys(DAY_NAMES).forEach((dayName) => {
+    zoneSchedule[dayName] = {
+      startHour: formatHourOrMinuteString(zone[`${DAY_NAMES[dayName]}OccupiedHour`]),
+      startMinute: formatHourOrMinuteString(zone[`${DAY_NAMES[dayName]}OccupiedMinute`]),
+      startAmPm: getAmPmString(zone[`${DAY_NAMES[dayName]}OccupiedAmPm`]),
+      endHour: formatHourOrMinuteString(zone[`${DAY_NAMES[dayName]}UnoccupiedHour`]),
+      endMinute: formatHourOrMinuteString(zone[`${DAY_NAMES[dayName]}UnoccupiedMinute`]),
+      endAmPm: getAmPmString(zone[`${DAY_NAMES[dayName]}UnoccupiedAmPm`]),
+    }
+  });
+
+  return zoneSchedule;
+}
+
+const getAmPmString = (value) => {
+  return AM_PM_VALUES[value] || 'AM' //Fall back to AM if the value is invalid
+}
+
+const formatHourOrMinuteString = (numberString) => {
+  if (numberString.length > 1) {
+    return numberString;
+  } else if (numberString.length === 1) {
+    return `0${numberString}`;
+  } else {
+    return '00';
+  }
+}
+
+export const getVacationsForCurrentSystem = (deviceShadow) => {
+  return null;
 }
 
 const requestDeviceShadowForSystem = (systemNumber) => {

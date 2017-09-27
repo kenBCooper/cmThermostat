@@ -27,6 +27,11 @@ const ZONE_STATUS_DISPLAY_STRINGS = {
   3: 'STAT LOW BAT',
 }
 
+const LOCK_STATUS_DISPLAY_STRINGS = {
+  0: 'UNLOCKED',
+  1: 'LOCKED',
+}
+
 const Diagnostics = (props) => {
   const diagnostics = getDiagnosticForCurrentSystem(props.deviceShadow);
   const zones = getZonesForCurrentSystem(props.deviceShadow)
@@ -66,7 +71,7 @@ const Diagnostics = (props) => {
                 const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
                 return(
                   <tr key={index}>
-                    <td>{`${zoneId}: ${zoneStatusDisplay}`}</td>
+                    <td>{`${zoneId}: ${zoneStatusDisplay} ${zones[zoneId].lockStatus}`}</td>
                   </tr>
                 )
               })}
@@ -83,9 +88,9 @@ const getStatusDisplay = (statusCode) => {
 }
 
 const mapStateToProps = (state) => {
-    return {
-        deviceShadow: state.shadow,
-    }
+  return {
+    deviceShadow: state.shadow,
+  }
 };
 
 export default connect(mapStateToProps)(Diagnostics);

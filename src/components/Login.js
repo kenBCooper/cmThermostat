@@ -12,23 +12,13 @@ import {
   AuthenticationDetails,
   CognitoUser
 } from 'amazon-cognito-identity-js';
-import { setUserInfo, receiveDeviceShadowUpdate, setConnectedStatus } from '../actions/AppActions';
+import { awsCognitoConfig } from '../aws-configuration.js'
+import { receiveUserInfo, receiveDeviceShadowUpdate, setConnectedStatus } from '../actions/AppActions';
 import { connectToDeviceShadow } from '../util/deviceShadowUtil';
 import './Login.css';
 import './Panel.css';
 
-const awsConfig = {
-  // Cognito Identity Pool ID
-  poolId: 'us-west-2_9hA0zhwrb',
-  // Application ID for Cognito group.
-  appClientId: '6s97aeq6n5kgk0ell2g6ebet1l',
-  // AWS Region
-  region: 'us-west-2',
-  // Unique deviceshadow endpoint
-  endpoint: 'a22i2y89l436o4.iot.us-west-2.amazonaws.com',
-  // Custom attribute name for mac address,
-  macAttrName: 'custom:mac',
-};
+//TODO figure out where what credentials we are using - we should use the ones saed in aws-configuration.js
 
 const LOGIN_SUCCESS_REDIRECT = '/0';
 
@@ -37,14 +27,14 @@ class Login extends Component {
     super(props);
 
     // For testing
-    // this.state = {
-    //   username: 'kev.r.cox90+test1@gmail.com',
-    //   password: 'Kevin1..',
-    // };
     this.state = {
-      username: '',
-      password: '',
+      username: 'kev.r.cox90+test1@gmail.com',
+      password: 'Kevin1..',
     };
+    // this.state = {
+    //   username: '',
+    //   password: '',
+    // };
   }
 
   login(username, password) {
@@ -94,7 +84,7 @@ class Login extends Component {
         const user = this.state.user;
         user.getUserAttributes((err, result) => {
           const userMacAddressAttr = 
-            result.find(function(attribute){return attribute.Name === awsConfig.macAttrName});
+            result.find(function(attribute){return attribute.Name === awsCognitoConfig.macAttrName});
           if (!userMacAddressAttr) {
             const error = 
               new Error('No mac address found this user. Please contact your administrator to set up this account.');
@@ -157,7 +147,7 @@ class Login extends Component {
 
 const mapDispatchToProps = (dispatch) => {
     return {
-        onLogin: (userInfo) => dispatch(setUserInfo(userInfo)),
+        onLogin: (userInfo) => dispatch(receiveUserInfo(userInfo)),
         onDeviceUpdate: (message) => dispatch(receiveDeviceShadowUpdate(message)),
         onSuccessfulDeviceConnection: () => dispatch(setConnectedStatus())
     }

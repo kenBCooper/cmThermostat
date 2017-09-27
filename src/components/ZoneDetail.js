@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 import InputRange from 'react-input-range';
 import { Panel } from 'react-bootstrap';
 
-import { updateDeviceShadow } from '../actions/AppActions';
+import { updateZone } from '../actions/AppActions';
 import LoadingIndicator from './LoadingIndicator';
 import { getZonesForCurrentSystem } from '../util/deviceShadowUtil';
 import ThermostatActionIcon from './ThermostatActionIcon';
@@ -103,7 +103,7 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     onZoneUpdate: (value, zoneAttribute, zoneId) => 
-      dispatch(updateDeviceShadow(value, zoneAttribute, zoneId)),
+      dispatch(updateZone(value, zoneAttribute, zoneId)),
   }
 }
 

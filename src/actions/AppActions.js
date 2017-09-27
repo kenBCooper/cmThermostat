@@ -13,9 +13,9 @@ export const setConnectedStatus = () => {
     }
 }
 
-export const updateDeviceShadow = (value, updateAttribute, zoneId) => {
+export const updateZone = (value, updateAttribute, zoneId) => {
   return {
-    type: Actions.UPDATE_DEVICE_SHADOW,
+    type: Actions.UPDATE_ZONE,
     payload: {
       value,
       updateAttribute,
@@ -24,9 +24,15 @@ export const updateDeviceShadow = (value, updateAttribute, zoneId) => {
   }
 }
 
-export const setUserInfo = (userAttrs) => {
+export const updateVacationSchedule = (systemId) => {
   return {
-    type: Actions.SET_USER_INFO,
+    type: Actions.UPDATE_VACATION_SCHEDULE
+  }
+}
+
+export const receiveUserInfo = (userAttrs) => {
+  return {
+    type: Actions.RECEIVE_USER_INFO,
     payload: {
       ...userAttrs,
     }
