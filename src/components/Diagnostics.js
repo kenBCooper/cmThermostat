@@ -42,17 +42,11 @@ const Diagnostics = (props) => {
 		const setZoneLockStatus = (value, zoneId) => {
 			props.onZoneUpdate( value.toString(), 'lockStatus', zoneId );
 		}
-		// const unlockZone = (zoneId) => {
-		// 	props.onZoneUpdate( '0', 'lockStatus', zoneId );
-		// }
 		const unlockAllZones = () => {
 			Object.keys(zones).forEach((zoneId) => {
 				setZoneLockStatus( 0, zoneId );
 			});
 		};
-		// const lockZone = (zoneId) => {
-		// 	props.onZoneUpdate( '1', 'lockStatus', zoneId );
-		// }
 		const lockAllZones = () => {
 			Object.keys(zones).forEach((zoneId) => {
 				setZoneLockStatus( 1, zoneId );
