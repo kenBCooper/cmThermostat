@@ -2,9 +2,9 @@ import React from 'react';
 import { BrowserRouter, Route, Redirect, Switch } from 'react-router-dom';
 import { connect } from 'react-redux';
 
+import AppPanel from './components/AppPanel';
 import ZoneList from './components/ZoneList';
 import ZoneDetail from './components/ZoneDetail';
-import NavHeader from './components/NavHeader';
 import Diagnostics from './components/Diagnostics';
 import Schedule from './components/Schedule';
 import Login from './components/Login';
@@ -13,36 +13,35 @@ const Router = (props) => {
   const isLoggedIn = isAuthenticated(props.userInfo);
   return (
     <BrowserRouter>
-        <div>
-            { isLoggedIn ? (<NavHeader />) : null}
-            <div className="container">
-              <Switch>
-                <LoggedOutOnlyRoute exact
-                  authStatus={isLoggedIn}
-                  path="/login"
-                  component={Login}/>
-                <PrivateRoute
-                  authStatus={isLoggedIn}
-                  path="/:rmId/d"
-                  component={Diagnostics}/>
-                <PrivateRoute
-                  authStatus={isLoggedIn}
-                  path="/:rmId/s"
-                  component={Schedule}/>
-                <PrivateRoute exact
-                  authStatus={isLoggedIn}
-                  path="/:RmId/:zoneId"
-                  component={ZoneDetail}/>
-                <PrivateRoute
-                  authStatus={isLoggedIn}
-                  path="/:rmId"
-                  component={ZoneList}/>
-                <PrivateRoute
-                  authStatus={isLoggedIn}
-                  component={ZoneList}/>
-              </Switch>
-            </div>
-        </div>
+      <div>
+        <AppPanel isLoggedIn={isLoggedIn}>
+          <Switch>
+            <LoggedOutOnlyRoute exact
+              authStatus={isLoggedIn}
+              path="/login"
+              component={Login}/>
+            <PrivateRoute
+              authStatus={isLoggedIn}
+              path="/:rmId/d"
+              component={Diagnostics}/>
+            <PrivateRoute
+              authStatus={isLoggedIn}
+              path="/:rmId/s"
+              component={Schedule}/>
+            <PrivateRoute exact
+              authStatus={isLoggedIn}
+              path="/:RmId/:zoneId"
+              component={ZoneDetail}/>
+            <PrivateRoute
+              authStatus={isLoggedIn}
+              path="/:rmId"
+              component={ZoneList}/>
+            <PrivateRoute
+              authStatus={isLoggedIn}
+              component={ZoneList}/>
+          </Switch>
+        </AppPanel>
+      </div>
     </BrowserRouter>
   );
 }
