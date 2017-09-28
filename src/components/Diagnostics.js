@@ -39,20 +39,23 @@ const Diagnostics = (props) => {
   if (!diagnostics || !zones) {
     return <LoadingIndicator />;
   } else {
-		const unlockZone = (zoneId) => {
-			props.onZoneUpdate( '0', 'lockStatus', zoneId );
+		const setZoneLockStatus = (value, zoneId) => {
+			props.onZoneUpdate( value.toString(), 'lockStatus', zoneId );
 		}
+		// const unlockZone = (zoneId) => {
+		// 	props.onZoneUpdate( '0', 'lockStatus', zoneId );
+		// }
 		const unlockAllZones = () => {
 			Object.keys(zones).forEach((zoneId) => {
-				unlockZone(zoneId)
+				setZoneLockStatus( 0, zoneId );
 			});
 		};
-		const lockZone = (zoneId) => {
-			props.onZoneUpdate( '1', 'lockStatus', zoneId );
-		}
+		// const lockZone = (zoneId) => {
+		// 	props.onZoneUpdate( '1', 'lockStatus', zoneId );
+		// }
 		const lockAllZones = () => {
 			Object.keys(zones).forEach((zoneId) => {
-				lockZone(zoneId)
+				setZoneLockStatus( 1, zoneId );
 			});
 		};
 
@@ -89,9 +92,9 @@ const Diagnostics = (props) => {
 								const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
 								const zoneStatusLocked = zones[zoneId].lockStatus;
 								const zoneStatusLockedToggleButtonGroup = (
-									<ToggleButtonGroup type="radio" name="locked" defaultValue={parseInt(zoneStatusLocked, 10)}>
-										<ToggleButton value={0} onClick={unlockZone.bind(this, zoneId)}>{LOCK_STATUS_DISPLAY_STRINGS[0]}</ToggleButton>
-										<ToggleButton value={1} onClick={lockZone.bind(this, zoneId)}>{LOCK_STATUS_DISPLAY_STRINGS[1]}</ToggleButton>
+									<ToggleButtonGroup type="radio" name="locked" value={parseInt(zoneStatusLocked, 10)} onChange={(value) => setZoneLockStatus(value, zoneId)}>
+										<ToggleButton value={0}>{LOCK_STATUS_DISPLAY_STRINGS[0]}</ToggleButton>
+										<ToggleButton value={1}>{LOCK_STATUS_DISPLAY_STRINGS[1]}</ToggleButton>
 									</ToggleButtonGroup>
 								);
 								let zoneSAStats;
