@@ -6,6 +6,10 @@ import { connect } from 'react-redux';
 import './NavSidebar.css';
 import logo from '../img/Zonex_Logo.png';
 
+// We restrict the max height of the system list based on the max height of the app
+// panel - the extra non system list space we want to reserve.
+const SYSTEM_LIST_BUFFER_SPACE = 200;
+
 class NavSideBar extends Component {
   constructor(props) {
     super(props);
@@ -30,8 +34,14 @@ class NavSideBar extends Component {
               <Glyphicon glyph={this.state.showSystemList ? "chevron-up" : "chevron-down"}/>
             </div>
           </li>
-          <Collapse in={this.state.showSystemList}>
-            <ul className="system-list">
+          <Collapse in={this.state.showSystemList}
+                    onExit={this.disableScrollbarForCollapse}
+                    onEnter={this.disableScrollbarForCollapse}
+                    onExited={this.enableScrollBarAfterCollapse}
+                    onEntered={this.enableScrollBarAfterCollapse}>
+            <ul ref="systemList" className="system-list" style={{
+              maxHeight: (this.props.maxHeight - SYSTEM_LIST_BUFFER_SPACE) + 'px'}
+            }>
               <li className="system-list-item nav-text">
                 <a onClick={this.handleNavigation} href="/0">
                   GenX
@@ -62,6 +72,16 @@ class NavSideBar extends Component {
       showSystemList: !this.state.showSystemList,
     });
   }
+
+  // While the collapse animation runs, we don't want flashes of the scrollbar to happen.
+  // We disable the scrollbar when the animation starts and re-enable it once it is over. 
+  disableScrollbarForCollapse = () => {
+    this.refs.systemList.style.overflowY = 'hidden';
+  }
+
+  enableScrollBarAfterCollapse = () => {
+    this.refs.systemList.style.overflowY = 'auto'; 
+  } 
 
   getRmCount = () => {
     // Discover data is universal, so we can always rely on the discover data in genx (system 0)

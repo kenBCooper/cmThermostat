@@ -1,38 +1,54 @@
-import React, { Component } from 'react';
-import {
-  Nav,
-  Navbar,
-  NavItem,
-} from 'react-bootstrap';
+import React from 'react';
 import { withRouter } from 'react-router-dom'
 
-import { getCurrentSystemNumber } from '../util/urlUtil'; 
+import { getCurrentSystemNumber } from '../util/urlUtil';
 
-class NavHeader extends Component {
-  render() {
-    const currentSystemNumber = getCurrentSystemNumber();
+import './NavHeader.css';
 
-    return (
-      <Navbar onSelect={(eventKey, event) => this.handleNavigation(eventKey, event)}>
-      <Nav>
-        <NavItem href={`/${currentSystemNumber}`} eventKey={1}>Zones</NavItem>
-        <NavItem href={`/${currentSystemNumber}/d`} eventKey={2}>Diagnostics</NavItem>
-        <NavItem href={`/${currentSystemNumber}/s`} eventKey={2}>Schedule</NavItem>
-      </Nav>
-      </Navbar>
-    );
-  }
-
-  handleNavigation = (eventKey, event) => {
+const NavHeader = (props) => {
+  const handleNavigation = (event) => {
     event.preventDefault();
-    this.props.history.push(event.target.pathname)
+    props.history.push(event.target.pathname)
   }
-}
 
-const mapStateToProps = (state) => {
-  return {
-    deviceShadow: state.shadow,
+  const isCurrentPath = (path) => {
+    return props.location.pathname === path;
   }
+
+  const zonesPath = `/${getCurrentSystemNumber()}`;
+  const diagnosticsPath = `/${getCurrentSystemNumber()}/d`
+  const schedulePath = `/${getCurrentSystemNumber()}/s`
+
+  const conditionallyApplySelectedClass = (baseClass, path) => {
+    if (isCurrentPath(path)) {
+      return baseClass + ' selected';
+    } else {
+      return baseClass
+    }
+  }
+
+  const renderSelectionArrow = (path) => {
+    return isCurrentPath(path) ? (<div className="selected-arrow"></div>) : '';
+  }
+
+  return (
+    <div className="nav-header">
+      <ul className="nav-header-list">
+        <li className={conditionallyApplySelectedClass("nav-header-list-item", zonesPath)}>
+          <i><a href={zonesPath} onClick={handleNavigation}>Zones</a></i>
+          {renderSelectionArrow(zonesPath)}
+        </li>
+        <li className={conditionallyApplySelectedClass("nav-header-list-item", diagnosticsPath)}>
+          <i><a href={diagnosticsPath} onClick={handleNavigation}>Diagnostics</a></i>
+          {renderSelectionArrow(diagnosticsPath)}
+        </li>
+        <li className={conditionallyApplySelectedClass("nav-header-list-item", schedulePath)}>
+          <i><a href={schedulePath} onClick={handleNavigation}>Schedule</a></i>
+          {renderSelectionArrow(schedulePath)}
+        </li>
+      </ul>
+    </div>
+  )
 }
 
 export default withRouter(NavHeader);
