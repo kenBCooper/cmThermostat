@@ -53,6 +53,9 @@ export const STAT_PARSE_LIST = {
   53: 'zoneStatus',
   54: 'zoneCall',
   56: 'standaloneThermostat',
+	57: 'leavingAir',
+	58: 'returnAir',
+	59: 'humidity',
   60: 'occupiedStatus',
 };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Panel, Table } from 'react-bootstrap';
+import { updateZone } from '../actions/AppActions';
+import { Panel, Table, ToggleButtonGroup, ToggleButton, Button } from 'react-bootstrap';
 
 import LoadingIndicator from './LoadingIndicator';
 import { 
@@ -38,6 +39,20 @@ const Diagnostics = (props) => {
   if (!diagnostics || !zones) {
     return <LoadingIndicator />;
   } else {
+		const setZoneLockStatus = (value, zoneId) => {
+			props.onZoneUpdate( value.toString(), 'lockStatus', zoneId );
+		}
+		const unlockAllZones = () => {
+			Object.keys(zones).forEach((zoneId) => {
+				setZoneLockStatus( 0, zoneId );
+			});
+		};
+		const lockAllZones = () => {
+			Object.keys(zones).forEach((zoneId) => {
+				setZoneLockStatus( 1, zoneId );
+			});
+		};
+
     return (
       <div>
         <Panel className="custom-panel">
@@ -61,20 +76,47 @@ const Diagnostics = (props) => {
           <Table fill className='custom-table'>
             <thead className='custom-table-heading'>
               <tr>
-                <th className='custom-table-heading-cell'>Thermostat Status</th>
+                <th className='custom-table-heading-cell' colSpan="4">Thermostat Status</th>
               </tr>
             </thead>
             <tbody>
-              {Object.keys(zones).map((zoneId, index) => {
-                const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
-                const zoneStatusDiagnosticCode = diagnostics[zoneStatusDiagnosticKey];
-                const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
-                return(
-                  <tr key={index}>
-                    <td>{`${zoneId}: ${zoneStatusDisplay} ${zones[zoneId].lockStatus}`}</td>
-                  </tr>
-                )
-              })}
+							{Object.keys(zones).map((zoneId, index) => {
+								const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
+								const zoneStatusDiagnosticCode = diagnostics[zoneStatusDiagnosticKey];
+								const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
+								const zoneStatusLocked = zones[zoneId].lockStatus;
+								const zoneStatusLockedToggleButtonGroup = (
+									<ToggleButtonGroup type="radio" name="locked" value={parseInt(zoneStatusLocked, 10)} onChange={(value) => setZoneLockStatus(value, zoneId)}>
+										<ToggleButton value={0}>{LOCK_STATUS_DISPLAY_STRINGS[0]}</ToggleButton>
+										<ToggleButton value={1}>{LOCK_STATUS_DISPLAY_STRINGS[1]}</ToggleButton>
+									</ToggleButtonGroup>
+								);
+								let zoneSAStats;
+								if (zones[zoneId].standaloneThermostat === '2' ? 'SA' : '') {
+									zoneSAStats = (
+										<div>
+											<div>{`Humidity: ${zones[zoneId].humidity}%`}</div>
+											<div>{`Leaving air: ${zones[zoneId].leavingAir}°`}</div>
+											<div>{`Return air: ${zones[zoneId].returnAir}°`}</div>
+										</div>
+									);
+								} else {
+									zoneSAStats = (
+										<div></div>
+									);
+								}
+								return(
+									<tr key={index}>
+										<td>{zoneSAStats}</td>
+										<td>{`${zoneId}: ${zoneStatusDisplay}`}</td>
+										<td style={{textAlign:"right"}}>{zoneStatusLockedToggleButtonGroup}</td>
+									</tr>
+								)
+							})}
+							<tr className='all-unlock-lock-table-footer'>
+								<td colSpan="2"><Button onClick={unlockAllZones.bind(this)} block>UNLOCK ALL</Button></td>
+								<td colSpan="2"><Button onClick={lockAllZones.bind(this)} block>LOCK ALL</Button></td>
+							</tr>
             </tbody>
           </Table>
         </Panel>
@@ -92,5 +134,11 @@ const mapStateToProps = (state) => {
     deviceShadow: state.shadow,
   }
 };
+const mapDispatchToProps = (dispatch) => {
+  return {
+    onZoneUpdate: (value, zoneAttribute, zoneId) => 
+      dispatch(updateZone(value, zoneAttribute, zoneId))
+  }
+}
 
-export default connect(mapStateToProps)(Diagnostics);
+export default connect(mapStateToProps, mapDispatchToProps)(Diagnostics);
