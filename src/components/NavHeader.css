@@ -1,0 +1,36 @@
+.nav-header {
+  height: 55px;
+}
+
+.nav-header-list {
+  padding: 0px;
+  margin: 0px;
+  list-style: none;
+}
+
+.nav-header-list-item {
+  margin-top: 15px;
+  margin-left: 35px;
+  float: left;
+}
+
+.nav-header-list-item a {
+  color: #b7b7b7;
+  text-decoration: none;
+}
+
+.selected a{
+  color: #55aedc;
+}
+
+.selected-arrow {
+  margin: 11px auto;
+
+  width: 0; 
+  height: 0; 
+
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  
+  border-bottom: 12px solid #b7b7b7;
+}

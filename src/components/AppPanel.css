@@ -1,0 +1,37 @@
+.app-panel {
+  min-height: 637px;
+  margin: 15px 15px;
+
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 150px auto;
+  grid-template-rows: 55px auto;
+
+  box-shadow: 0px 7px 15px 3px rgba(0,0,0,0.25);
+  background-color: white;
+}
+
+@media screen and (max-height: 749px) {
+  .app-panel {
+    min-height: 85vh;
+  }
+}
+
+.app-panel-header {
+  grid-column-start: 2;
+  grid-column-end: 3;
+  grid-row-start: 1;
+}
+
+.app-panel-sidebar {
+  grid-column-start: 1;
+  grid-row-start: 1;
+  grid-row-end: 3;
+
+  z-index: 1;
+}
+
+.app-panel-workspace {
+  grid-column-start: 2;
+  grid-row-start: 2;
+}
