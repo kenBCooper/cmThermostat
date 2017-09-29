@@ -6,12 +6,12 @@ import { getCurrentSystemNumber } from './urlUtil';
 import { STAT_PARSE_LIST, DIAGNOSTIC_PARSE_LIST } from './deviceShadowParseConfig';
 import { DAY_NAMES, AM_PM_VALUES } from '../constants/ScheduleConstants';
 
-// 3 sec debounce.
-const PUBLISH_DEBOUNCE_TIME = 3000;
+// 3 sec debounce per unique zone update.
+const UPDATE_DEBOUNCE_TIME = 3000;
+const PENDING_UPDATES = {};
 
 let thingName = undefined;
 let mqttClient;
-let publishTimeout;
 
 const setThingName = (macAddress) => {
   // All 4 digit mac addresses will have a 9 hard-coded before their 
@@ -41,10 +41,14 @@ const createBaseRequestMessage = (systemNumber) => {
   return `{"state": {"reported":{"R":"${systemNumber},0,"}}}`;
 }
 
-export const publishDeviceShadowUpdate = (updatedShadow, zoneId) => {
-  clearTimeout(publishTimeout);
+export const publishDeviceShadowUpdate = (updatedShadow, zoneId, systemId) => {
+  // If an update is pending for this specific system/zone, replace it with the latest
+  // update.
+  const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId][zoneId];
+  if (pendingUpdate) clearTimeout(pendingUpdate);
+
   const shadowUpdatePayload = getZoneUpdatePayload(updatedShadow, zoneId);
-  publishTimeout = setTimeout(() => {
+  const nextUpdate = setTimeout(() => {
     const updatePayload = {
       state: {
           reported: shadowUpdatePayload
@@ -53,7 +57,10 @@ export const publishDeviceShadowUpdate = (updatedShadow, zoneId) => {
 
 		console.log("Published: ", updatePayload);
     mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
-  }, PUBLISH_DEBOUNCE_TIME);
+  }, UPDATE_DEBOUNCE_TIME);
+
+  if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = {};
+  PENDING_UPDATES[systemId][zoneId] = nextUpdate;
 }
 
 // Update raw shadow with new values in the updateShadowObject.
@@ -150,22 +157,43 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
       mqttClient.publish(updateTopicName(), createBaseRequestMessage(0));
       mqttClient.publish(getTopicName());
 
-      // DUMMY FOR WHEN BOARD IS DOWN
-    //   onUpdate(JSON.parse(`{
-    //     "R": "0,0,",
-    //     "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
-    //     "D": "0,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-    //     "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
-    //     "DIS": "3,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
-    //     "P": "0,1,2,3,4,",
-    //     "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-    //     "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-    //     "S3": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-    //     "S4": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-    //     "S5": "0,1,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,2,70,75,25,0,",
-    //     "S6": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-    //     "S7": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-    //   }`));
+      // // DUMMY FOR WHEN BOARD IS DOWN
+      // onUpdate(JSON.parse(`{
+      //   "R": "0,0,",
+      //   "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
+      //   "D": "0,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+      //   "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
+      //   "DIS": "3,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
+      //   "P": "0,1,2,3,4,",
+      //   "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
+      //   "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+      //   "S3": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+      //   "S4": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+      //   "S5": "0,1,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,2,70,75,25,0,",
+      //   "S6": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+      //   "S7": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
+      // }`));
+
+      // onUpdate(JSON.parse(`{
+      //   "D": "1,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+      //   "S1": "1,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
+      //   "S2": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+      //   "S3": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
+      // }`));
+
+      // onUpdate(JSON.parse(`{
+      //   "D": "2,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+      //   "S1": "2,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
+      //   "S2": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+      //   "S3": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
+      // }`));
+
+      // onUpdate(JSON.parse(`{
+      //   "D": "3,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+      //   "S1": "3,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
+      //   "S2": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+      //   "S3": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
+      // }`));
     });
 
     mqttClient.on('message', (topic, message) => {
@@ -317,12 +345,24 @@ const getSchedulesForZone = (zone) => {
   let zoneSchedule = {};
   Object.keys(DAY_NAMES).forEach((dayName) => {
     zoneSchedule[dayName] = {
-      startHour: formatHourOrMinuteString(zone[`${DAY_NAMES[dayName]}OccupiedHour`]),
-      startMinute: formatHourOrMinuteString(zone[`${DAY_NAMES[dayName]}OccupiedMinute`]),
-      startAmPm: getAmPmString(zone[`${DAY_NAMES[dayName]}OccupiedAmPm`]),
-      endHour: formatHourOrMinuteString(zone[`${DAY_NAMES[dayName]}UnoccupiedHour`]),
-      endMinute: formatHourOrMinuteString(zone[`${DAY_NAMES[dayName]}UnoccupiedMinute`]),
-      endAmPm: getAmPmString(zone[`${DAY_NAMES[dayName]}UnoccupiedAmPm`]),
+      startHour: formatHourOrMinuteString(
+        zone[`${DAY_NAMES[dayName]}OccupiedHour`]
+      ),
+      startMinute: formatHourOrMinuteString(
+        zone[`${DAY_NAMES[dayName]}OccupiedMinute`]
+      ),
+      startAmPm: getAmPmString(
+        zone[`${DAY_NAMES[dayName]}OccupiedAmPm`]
+      ),
+      endHour: formatHourOrMinuteString(
+        zone[`${DAY_NAMES[dayName]}UnoccupiedHour`]
+      ),
+      endMinute: formatHourOrMinuteString(
+        zone[`${DAY_NAMES[dayName]}UnoccupiedMinute`]
+      ),
+      endAmPm: getAmPmString(
+        zone[`${DAY_NAMES[dayName]}UnoccupiedAmPm`]
+      ),
     }
   });
 
