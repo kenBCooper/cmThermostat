@@ -1,11 +1,13 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Table } from 'react-bootstrap';
+import { Table, Modal } from 'react-bootstrap';
 
 import LoadingIndicator from './LoadingIndicator';
 import { getZonesForCurrentSystem } from '../util/deviceShadowUtil';
 import ThermostatActionIcon from './ThermostatActionIcon';
+import ZoneDetail from './ZoneDetail';
 
+import './ZoneDetail.css';
 import './Table.css';
 
 const ZONE_LIST_HEADERS = {
@@ -18,6 +20,15 @@ const ZONE_LIST_HEADERS = {
 }
 
 class ZoneList extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      showZoneDetail: false,
+      zoneDetailNumber: undefined,
+    };
+  }
+
   mapZonesDataToDisplayGrid(zonesData) {
     let mappedZoneData = [];
 
@@ -67,9 +78,17 @@ class ZoneList extends Component {
     );
   }
 
-  openZoneDetail(index) {
-    const currentRm = this.props.match.params.rmId;
-    this.props.history.push(`${currentRm}/${index + 1}`)
+  openZoneDetail(zoneId) {
+    this.setState({
+      zoneDetailNumber: zoneId,
+      showZoneDetail: true,
+    });
+  }
+
+  closeZoneDetail = () => {
+    this.setState({
+      showZoneDetail: false,
+    });
   }
 
   render() {
@@ -78,17 +97,19 @@ class ZoneList extends Component {
     if (!this.props.connected || !zones) {
       return <LoadingIndicator />
     } else {
-      if (zones) {
-        const zonesData = this.mapZonesDataToDisplayGrid(zones);
-        return (
-            <Table className="custom-table">
-              {this.renderTableHeader(Object.values(ZONE_LIST_HEADERS))}
-              {this.renderTableBody(zonesData)}
-            </Table>
-        );
-      } else {
-        return <div></div>
-      }
+      const zonesData = this.mapZonesDataToDisplayGrid(zones);
+      return (
+        <div>
+          <Table className="custom-table">
+            {this.renderTableHeader(Object.values(ZONE_LIST_HEADERS))}
+            {this.renderTableBody(zonesData)}
+          </Table>
+          <ZoneDetail zoneData={zones[this.state.zoneDetailNumber]}
+                      zoneId={this.state.zoneDetailNumber}
+                      show={this.state.showZoneDetail}
+                      onHide={this.closeZoneDetail}/>
+        </div>
+      );
     }
   }
 
@@ -116,7 +137,7 @@ class ZoneList extends Component {
           return (
             <tr key={'zoneRow' + rowIndex}
               className="custom-table-row table-hover-color"
-              onClick={() => this.openZoneDetail(rowIndex)}>
+              onClick={() => this.openZoneDetail(rowIndex + 1)}>
               {Object.values(tableRowData).map((rowDataItem, cellIndex) => {
                 return (
                   <td key={'zoneData' + rowIndex + cellIndex} className="custom-table-cell">

@@ -28,10 +28,6 @@ const Router = (props) => {
               authStatus={isLoggedIn}
               path="/:rmId/s"
               component={Schedule}/>
-            <PrivateRoute exact
-              authStatus={isLoggedIn}
-              path="/:RmId/:zoneId"
-              component={ZoneDetail}/>
             <PrivateRoute
               authStatus={isLoggedIn}
               path="/:rmId"
