@@ -43,10 +43,8 @@
 	font-size: 64px;
 }
 
-@media only screen and (min-width: 991px) {
-    .temp-control-container {
-        width: 75%;
-    }
+.temp-control-container {
+  width: 98%;
 }
 
 .temp-control {
