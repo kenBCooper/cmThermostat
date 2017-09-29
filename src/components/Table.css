@@ -1,11 +1,16 @@
 .custom-table {
+  border-radius: 0px;
   width: 100%;
   color: #424B54;
   font-size: 16px;
 }
 
+.custom-table tbody {
+  border-bottom: 1px solid #ddd;
+}
+
 .custom-table-heading {
-  background-color: #93A8AC;
+  background-color: #c1c1c1;
   border: none;
 }
 
@@ -20,7 +25,7 @@
 }
 
 .table-hover-color:hover{
-  background-color: #93A8AC;
+  background-color: #c1c1c1;
 }
 
 .custom-table-cell {

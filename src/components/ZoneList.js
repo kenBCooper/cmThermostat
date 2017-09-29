@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Panel, Table } from 'react-bootstrap';
+import { Table } from 'react-bootstrap';
 
-import './Table.css';
-import './Panel.css';
 import LoadingIndicator from './LoadingIndicator';
 import { getZonesForCurrentSystem } from '../util/deviceShadowUtil';
 import ThermostatActionIcon from './ThermostatActionIcon';
+
+import './Table.css';
 
 const ZONE_LIST_HEADERS = {
     ZONE: 'Zone',
@@ -81,12 +81,10 @@ class ZoneList extends Component {
       if (zones) {
         const zonesData = this.mapZonesDataToDisplayGrid(zones);
         return (
-          <Panel className="custom-panel">
-            <Table fill className="custom-table">
+            <Table className="custom-table">
               {this.renderTableHeader(Object.values(ZONE_LIST_HEADERS))}
               {this.renderTableBody(zonesData)}
             </Table>
-          </Panel>
         );
       } else {
         return <div></div>
