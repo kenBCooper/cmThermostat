@@ -4,7 +4,6 @@ import { connect } from 'react-redux';
 
 import AppPanel from './components/AppPanel';
 import ZoneList from './components/ZoneList';
-import ZoneDetail from './components/ZoneDetail';
 import Diagnostics from './components/Diagnostics';
 import Schedule from './components/Schedule';
 import Login from './components/Login';

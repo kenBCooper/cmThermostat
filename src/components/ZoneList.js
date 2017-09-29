@@ -1,13 +1,12 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Table, Modal } from 'react-bootstrap';
+import { Table } from 'react-bootstrap';
 
 import LoadingIndicator from './LoadingIndicator';
 import { getZonesForCurrentSystem } from '../util/deviceShadowUtil';
 import ThermostatActionIcon from './ThermostatActionIcon';
 import ZoneDetail from './ZoneDetail';
 
-import './ZoneDetail.css';
 import './Table.css';
 
 const ZONE_LIST_HEADERS = {
