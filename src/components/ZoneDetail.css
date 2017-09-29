@@ -53,6 +53,8 @@
 }
 
 .temp-control h3 {
+	margin-bottom: 15px;
+	margin-top: 10px;
 	font-size: 20px;
 }
 
@@ -75,11 +77,11 @@
 }
 
 .temp-control .input-range__label {
-	font-size: 12px;
+	font-size: 16px;
 }
 
 .temp-control .input-range__label--value {
-	top: -27px;
+	top: -35px;
 }
 
 .input-range__slider-container:first-of-type .input-range__slider {
