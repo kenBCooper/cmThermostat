@@ -1,16 +1,13 @@
 import React, { Component } from 'react';
+import { Modal } from 'react-bootstrap'; 
 import { connect } from 'react-redux';
 import InputRange from 'react-input-range';
-import { Panel } from 'react-bootstrap';
 
 import { updateZone } from '../actions/AppActions';
-import LoadingIndicator from './LoadingIndicator';
-import { getZonesForCurrentSystem } from '../util/deviceShadowUtil';
 import ThermostatActionIcon from './ThermostatActionIcon';
 
 import 'react-input-range/lib/css/index.css';
 import './ZoneDetail.css';
-import './Panel.css';
 
 const MIN_TEMP = 50;
 const MAX_TEMP = 100;
@@ -18,31 +15,45 @@ const MAX_TEMP = 100;
 class ZoneDetail extends Component {
   state={}
   render() {
-    const zoneId = parseInt(this.props.match.params.zoneId, 10);
-    if (zoneId < 0 || zoneId > 20) {
-      return null;
-    }
-
-    const zones = getZonesForCurrentSystem(this.props.deviceShadow);
-    if (zones && zones[zoneId]) {
-      const zoneData = zones[zoneId];
+    const zoneData = this.props.zoneData
+    if (zoneData && this.props.zoneId) {
       return (
-        <Panel className='custom-panel' header={`Zone ${zoneId}`}>
-          <div className='occupied-status-display'>
-            <p>Currently {zoneData.occupiedStatus === '1' ? 'Occupied' : 'Unoccupied'}</p>
-          </div>
-          <div className='temp-display'>
-            <p>
-              {zoneData.currentTemp}°
-              <ThermostatActionIcon zoneData={zoneData} />
-            </p>
-          </div>
-          {this.renderTempSetpoints(zoneData)}
-        </Panel>
+        <Modal className="zone-detail-modal"
+               bsSize='lg'
+               show={this.props.show}
+               onHide={this.props.onHide}>
+          <Modal.Header className="zone-detail-header" closeButton>
+            <Modal.Title>{`Zone ${this.props.zoneId}`}</Modal.Title>
+            <div className='occupied-status-display'>
+              <i>Current Status:
+                <div className='occupied-highlight'>
+                  {zoneData.occupiedStatus === '1' ? ' Occupied' : ' Unoccupied'}
+                </div>
+              </i>
+            </div>
+          </Modal.Header>  
+          {this.renderZoneDetail()}
+        </Modal>
       );
     } else {
-      return <LoadingIndicator />;
+      return <div></div>
     }
+  }
+
+  renderZoneDetail() {
+    const zoneData = this.props.zoneData
+
+    return (
+      <div className='zone-detail-body'>
+        <div className='temp-display'>
+          <p>
+            {zoneData.currentTemp}°
+            <ThermostatActionIcon zoneData={zoneData} />
+          </p>
+        </div>
+        {this.renderTempSetpoints(zoneData)}
+      </div>
+    );
   }
 
   renderTempSetpoints = (zoneData) => {
@@ -88,15 +99,9 @@ class ZoneDetail extends Component {
     const minTempZoneAttribute = occupied ? 'occupiedHeat' : 'unoccupiedHeat';
 
     this.props.onZoneUpdate(
-      tempSetPoints.max.toString(), maxTempZoneAttribute, this.props.match.params.zoneId);
+      tempSetPoints.max.toString(), maxTempZoneAttribute, this.props.zoneId);
     this.props.onZoneUpdate(
-      tempSetPoints.min.toString(), minTempZoneAttribute, this.props.match.params.zoneId);
-  }
-};
-
-const mapStateToProps = (state) => {
-  return {
-    deviceShadow: state.shadow,
+      tempSetPoints.min.toString(), minTempZoneAttribute, this.props.zoneId);
   }
 };
 
@@ -107,4 +112,4 @@ const mapDispatchToProps = (dispatch) => {
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(ZoneDetail);
+export default connect(undefined, mapDispatchToProps)(ZoneDetail);

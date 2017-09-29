@@ -10,7 +10,7 @@
 }
 
 .custom-table-heading {
-  background-color: #c1c1c1;
+  background-color: #dadada;
   border: none;
 }
 
@@ -25,7 +25,7 @@
 }
 
 .table-hover-color:hover{
-  background-color: #c1c1c1;
+  background-color: #dadada;
 }
 
 .custom-table-cell {
