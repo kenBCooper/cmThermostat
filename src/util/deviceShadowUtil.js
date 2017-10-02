@@ -296,7 +296,7 @@ const getZoneUpdatePayload = (rawShadow, zoneId) => {
   Object.keys(rawShadow).forEach((key) => {
     if (key.charAt(0) === 'S') {
       const zoneNumber = key.split('S')[1];
-      if (zoneNumber === zoneId) {
+      if (zoneNumber === zoneId.toString()) {
         zoneUpdatePayload[key] = rawShadow[key];
       }
     }
