@@ -124,10 +124,10 @@ class Schedule extends Component {
 						<Table responsive>
 							<thead>
 								<tr>
-									<th key={0}>Zone / Day(s)</th>
+									<th key={0} style={{fontSize: '16px'}}>Zone / Day(s)</th>
 									{dayChoices.map( (dayChoice, index) => {
 										return (
-											<th key={index+1}>{dayChoice}</th>
+											<th key={index+1} style={{fontSize: '16px'}}>{dayChoice}</th>
 										)}
 									)}
 								</tr>
@@ -136,10 +136,10 @@ class Schedule extends Component {
 								{zoneChoices.map( (zoneChoice, index) => {
 									return (
 										<tr key={index}>
-											<td key={0}>{zoneChoice}</td>
+											<td key={0} style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>{zoneChoice}</td>
 											{dayChoices.map( (dayChoice, ind) => {
 												return (
-													<td key={ind+1}>
+													<td key={ind+1} style={{padding: '16px 8px'}}>
 														<TimePicker
 															use12Hours
 															format="h:mm a"
