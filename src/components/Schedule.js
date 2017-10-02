@@ -68,11 +68,17 @@ class Schedule extends Component {
 		return allEq ? firstMoment : null;
 	}
 
+	disabledMinutes = () => {
+		let disabled = Array.from(new Array(60), (x,i) => {
+			if (i % 15 !== 0) return i;
+		})
+		return disabled;
+	}
+
 	render = () => {
     const zones = getZonesForCurrentSystem(this.props.deviceShadow);
     const schedules = getSchedulesForCurrentSystem(this.props.deviceShadow);
 		let moments = getMomentsForCurrentSchedules(schedules);
-		console.log('moments: ', moments);
 
 		const zoneIds = Object.keys(zones);
 		const zoneChoices = ["All", ...zoneIds];
@@ -81,7 +87,6 @@ class Schedule extends Component {
 		zoneIds.forEach( (zone) => {
 			zoneArrays[zone] = [zone];
 		} )
-		console.log('zoneArrays: ', zoneArrays);
 
 		let dayChoices = ["All", "Weekdays"];
 		const days = Object.keys(DAY_NAMES);
@@ -92,7 +97,6 @@ class Schedule extends Component {
 		days.forEach( (day) => {
 			dayArrays[day] = [day];
 		} )
-		console.log('dayArrays: ', dayArrays);
 
 		// add moments for zone:all, day:all,weekdays
 		Object.keys(dayArrays).forEach( (dayChoice) => {
@@ -105,7 +109,6 @@ class Schedule extends Component {
 				}
 			} )
 		} )
-		console.log('moments: ', moments);
 		
 		return (
 			<div>
@@ -139,6 +142,8 @@ class Schedule extends Component {
 															format="h:mm a"
 															value={moments[zoneChoice][dayChoice].startMoment}
 															placeholder="Occ."
+															disabledMinutes={this.disabledMinutes}
+															hideDisabledOptions
 															onChange={this.onArrayTimeChange.bind(this, 'Occupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
 														<br />
 														<TimePicker
@@ -146,6 +151,8 @@ class Schedule extends Component {
 															format="h:mm a"
 															value={moments[zoneChoice][dayChoice].endMoment}
 															placeholder="Unocc."
+															disabledMinutes={this.disabledMinutes}
+															hideDisabledOptions
 															onChange={this.onArrayTimeChange.bind(this, 'Unoccupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
 													</td>
 												);
