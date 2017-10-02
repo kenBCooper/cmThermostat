@@ -28,24 +28,36 @@ class Schedule extends Component {
 	}
 
 	// given a start or end time and an array of zones and/or days, update the hardware
-	onArrayTimeChange = (occOrUnocc, dayChoices, zoneChoices, timeMoment, timeString) => {
+	onArrayTimeChange = (moments, occOrUnocc, dayChoices, zoneChoices, timeMoment, timeString) => {
 		zoneChoices.forEach( (zone) => {
 			dayChoices.forEach( (day) => {
-				this.onIndividualTimeChange(occOrUnocc, day, zone, timeMoment, timeString);
+				this.onIndividualTimeChange(moments, occOrUnocc, day, zone, timeMoment, timeString);
 			} )
 		} )
 	}
 
 	// given a start or end time, a zone, and a day, update the hardware
-	onIndividualTimeChange = (occOrUnocc, dayChoice, zoneChoice, timeMoment, timeString) => {
-		const [hourMinute, amOrPmStr] = timeMoment.format('h:mm A').toString().split(" ");
-		const [hour, minute] = hourMinute.split(":");
-		const amOrPm = (amOrPmStr === 'PM' ? 1 : 0);
-		this.props.onZoneUpdate(hour, `${DAY_NAMES[dayChoice]}${occOrUnocc}Hour`, zoneChoice);
-		this.props.onZoneUpdate(minute, `${DAY_NAMES[dayChoice]}${occOrUnocc}Minute`, zoneChoice);
-		this.props.onZoneUpdate(amOrPm, `${DAY_NAMES[dayChoice]}${occOrUnocc}AmPm`, zoneChoice);
+	onIndividualTimeChange = (moments, occOrUnocc, dayChoice, zoneChoice, timeMoment, timeString) => {
+		if (this.validateTime(moments, occOrUnocc, dayChoice, zoneChoice, timeMoment)) {
+			const [hourMinute, amOrPmStr] = timeMoment.format('h:mm A').toString().split(" ");
+			const [hour, minute] = hourMinute.split(":");
+			const amOrPm = (amOrPmStr === 'PM' ? 1 : 0);
+			this.props.onZoneUpdate(hour, `${DAY_NAMES[dayChoice]}${occOrUnocc}Hour`, zoneChoice);
+			this.props.onZoneUpdate(minute, `${DAY_NAMES[dayChoice]}${occOrUnocc}Minute`, zoneChoice);
+			this.props.onZoneUpdate(amOrPm, `${DAY_NAMES[dayChoice]}${occOrUnocc}AmPm`, zoneChoice);
+		}
 	}
 
+	validateTime = (moments, occOrUnocc, dayChoice, zoneChoice, newTimeMoment) => {
+		// if setting occupied time, must be earlier than unocc
+		if (occOrUnocc === 'Occupied') {
+			// careful of edge case where unoccupied doesn't exist?
+			return newTimeMoment.isBefore(moments[zoneChoice][dayChoice].endMoment)
+		} else {
+			// if setting unocc time, must be later than occ
+			return newTimeMoment.isAfter(moments[zoneChoice][dayChoice].startMoment)
+		}
+	}
 	// given an array of zones and an array of days, if they all have the same moment, return it; otherwise, return
 	// an empty object
 	allEqual = (moments, startOrEndMoment, zoneArray, dayArray) => {
@@ -147,7 +159,7 @@ class Schedule extends Component {
 															placeholder="Occ."
 															disabledMinutes={this.disabledMinutes}
 															hideDisabledOptions
-															onChange={this.onArrayTimeChange.bind(this, 'Occupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
+															onChange={this.onArrayTimeChange.bind(this, moments, 'Occupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
 														<br />
 														<TimePicker
 															use12Hours
@@ -156,7 +168,7 @@ class Schedule extends Component {
 															placeholder="Unocc."
 															disabledMinutes={this.disabledMinutes}
 															hideDisabledOptions
-															onChange={this.onArrayTimeChange.bind(this, 'Unoccupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
+															onChange={this.onArrayTimeChange.bind(this, moments, 'Unoccupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
 													</td>
 												);
 											}
