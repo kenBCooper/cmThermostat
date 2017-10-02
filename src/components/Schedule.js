@@ -71,6 +71,9 @@ class Schedule extends Component {
 	disabledMinutes = () => {
 		let disabled = Array.from(new Array(60), (x,i) => {
 			if (i % 15 !== 0) return i;
+			// return a number that isn't 00, 15, 30, 45
+			// to keep compiler from throwing error
+			return 14;
 		})
 		return disabled;
 	}
