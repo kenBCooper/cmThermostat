@@ -6,6 +6,7 @@ import { TimePicker } from 'antd';
 // import moment from 'moment';
 
 // import LoadingIndicator from './LoadingIndicator';
+import UnderDevelopmentBanner from './UnderDevelopmentBanner';
 import {
   getZonesForCurrentSystem,
   getSchedulesForCurrentSystem,
@@ -91,6 +92,7 @@ class Schedule extends Component {
 	}
 
 	render = () => {
+
     const zones = getZonesForCurrentSystem(this.props.deviceShadow);
     const schedules = getSchedulesForCurrentSystem(this.props.deviceShadow);
 		let moments = getMomentsForCurrentSchedules(schedules);
@@ -127,6 +129,7 @@ class Schedule extends Component {
 		
 		return (
 			<div>
+				<UnderDevelopmentBanner />
 				<Nav bsStyle="tabs" activeKey="1" onSelect={this.handleSelect}>
 					<NavItem eventKey="1">Weekly Schedule</NavItem>
 					<NavItem eventKey="2">Vacation Placeholder</NavItem>

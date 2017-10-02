@@ -4,6 +4,7 @@ import { updateZone } from '../actions/AppActions';
 import { Panel, Table, ToggleButtonGroup, ToggleButton, Button } from 'react-bootstrap';
 
 import LoadingIndicator from './LoadingIndicator';
+import UnderDevelopmentBanner from './UnderDevelopmentBanner';
 import { 
   getDiagnosticForCurrentSystem,
   getZonesForCurrentSystem
@@ -55,6 +56,7 @@ const Diagnostics = (props) => {
 
     return (
       <div>
+        <UnderDevelopmentBanner />
         <Panel className="custom-panel">
           {diagnostics && (
             <Table fill className='custom-table'>
