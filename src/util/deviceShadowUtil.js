@@ -5,6 +5,7 @@ import { awsConfig } from '../aws-configuration';
 import { getCurrentSystemNumber } from './urlUtil';
 import { STAT_PARSE_LIST, DIAGNOSTIC_PARSE_LIST } from './deviceShadowParseConfig';
 import { DAY_NAMES, AM_PM_VALUES } from '../constants/ScheduleConstants';
+import moment from 'moment';
 
 // 3 sec debounce per unique zone update.
 const UPDATE_DEBOUNCE_TIME = 3000;
@@ -328,6 +329,24 @@ export const getDiagnosticForCurrentSystem = (deviceShadow) => {
     requestDeviceShadowForSystem(systemNumber);
     return undefined;
   }
+}
+
+export const getMomentsForCurrentSchedules = (schedules) => {
+	// schedules: zone -> day -> start/ends
+	let moments = {};
+	Object.keys(schedules).forEach( (zone) => {
+		moments[zone] = {};
+		Object.keys(schedules[zone]).forEach( (day) => {
+			let dayTimes = schedules[zone][day];
+			let startMoment = moment(`${dayTimes.startHour}:${dayTimes.startMinute} ${dayTimes.startAmPm}`, 'h:mm a')
+			let endMoment = moment(`${dayTimes.endHour}:${dayTimes.endMinute} ${dayTimes.endAmPm}`, 'h:mm a')
+			moments[zone][day] = {
+				startMoment: startMoment,
+				endMoment: endMoment,
+			}
+		} )
+	} )
+	return moments;
 }
 
 export const getSchedulesForCurrentSystem = (deviceShadow) => {

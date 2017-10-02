@@ -1,240 +1,166 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Nav, NavItem, NavDropdown, MenuItem, Table } from 'react-bootstrap';
-import TimeInput from 'react-time-input';
+import { Nav, NavItem, Well, Panel, Table } from 'react-bootstrap';
 import { updateZone } from '../actions/AppActions';
+import { TimePicker } from 'antd';
+// import moment from 'moment';
 
 // import LoadingIndicator from './LoadingIndicator';
 import {
   getZonesForCurrentSystem,
   getSchedulesForCurrentSystem,
+	getMomentsForCurrentSchedules,
 } from '../util/deviceShadowUtil';
 import { DAY_NAMES } from '../constants/ScheduleConstants';
 
+import 'antd/dist/antd.css';  // or 'antd/dist/antd.less'
 import './Panel.css';
 import './Table.css';
 import './Schedule.css';
 
 class Schedule extends Component {
 	state = {
-		eventKey: '1.1',
+		eventKey: '1',
   }
 
 	handleSelect = (eventKey) => {
 		this.setState({ eventKey });
 	}
 
-	render = () => {
-		// can all of this be moved into a constructor?
-    const zones = getZonesForCurrentSystem(this.props.deviceShadow);
-    const schedules = getSchedulesForCurrentSystem(this.props.deviceShadow);
-    console.log(schedules);
-
-		const zoneIds = Object.keys(zones);
-		const zoneChoices = ["All", ...zoneIds];
-
-		let dayChoices = ["All"];
-		if (this.state.eventKey === '1.1') {
-			const days = Object.keys(DAY_NAMES);
-			dayChoices = [...dayChoices, ...days];
-		} else {
-			dayChoices = [...dayChoices, "Weekday", "Sat", "Sun"];
-		}
-
-		return (
-			<div>
-				<Nav bsStyle="tabs" activeKey="1" onSelect={this.handleSelect}>
-					<NavDropdown eventKey="1" title="Edit Weekly Schedule" id="nav-dropdown">
-						<MenuItem eventKey="1.1">By Day</MenuItem>
-						<MenuItem eventKey="1.2">By Weekday/Sat/Sun</MenuItem>
-					</NavDropdown>
-					<NavItem eventKey="2">Vacation Placeholder</NavItem>
-				</Nav>
-				<Table responsive>
-					<thead>
-						<tr>
-							<th key={0}>Zone / Day(s)</th>
-							{dayChoices.map( (dayChoice, index) => {
-								return (
-									<th key={index+1}>{dayChoice}</th>
-								)}
-							)}
-						</tr>
-					</thead>
-					<tbody>
-						{zoneChoices.map( (zoneChoice, index) => {
-							return (
-								<tr key={index}>
-									<td key={0}>{zoneChoice}</td>
-									{dayChoices.map( (dayChoice, ind) => {
-										// schedule = this.determineSchedule(schedules, zoneChoice, dayChoice);
-										// if (dayChoice === 'All') { return (<td key={ind+1}>All</td>) };
-										if (dayChoice === 'All') { 
-											return (<td key={ind+1}>{this.renderAllTimePicker(schedules, zoneChoice)}</td>) };
-											// return (<td key={ind+1}><renderAllTimePicker schedules={schedules} zoneChoice={zoneChoice} /></td>) };
-										if (dayChoice === 'Weekday') { return (<td key={ind+1}>All</td>) };
-										if (zoneChoice === 'All') { return (<td key={ind+1}>All</td>) };
-										const schedule = schedules[zoneChoice][dayChoice];
-										return (
-											<td key={ind+1}>
-												{this.renderStartEndTimePicker(schedule, zoneChoice, dayChoice)}
-											</td>
-										);
-									}
-									)}
-								</tr>
-							)}
-						)}
-					</tbody>
-				</Table>
-				<div><p>Vacation Placeholder!</p></div>
-			</div>
-		);
+	// given a start or end time and an array of zones and/or days, update the hardware
+	onArrayTimeChange = (occOrUnocc, dayChoices, zoneChoices, timeMoment, timeString) => {
+		zoneChoices.forEach( (zone) => {
+			dayChoices.forEach( (day) => {
+				this.onIndividualTimeChange(occOrUnocc, day, zone, timeMoment, timeString);
+			} )
+		} )
 	}
 
-	// determineSchedule = (schedules, zoneChoice, dayChoice) => {
-	// 	if (Object.keys(DAY_NAMES).find( (day) => {
-	// 		return day === dayChoice
-	// 	} )) {
-	// 		if (zoneChoice === 'All') {
-	// 			schedule = schedules[zones[0]][dayChoice];
-	// 			Object.keys(zones).forEach( (zoneId) => {
-	// 				if (schedule != )
-	// 			}
-	// 			
-	// 			return schedule;
-	// 		else {
-	// 			return schedules[zoneChoice][dayChoice];
-	// 		}
-	// 	} else {
-	// 		if (dayChoice === 'Weekday') {
-	// 			if (zoneChoice === 'All') {
-  //
-	// 			} else {
-  //
-	// 			}
-	// 		} else {
-	// 			// dayChoice must be 'All'
-	// 		}
-	// 	}
-	// }
-
-	renderStartEndTimePicker(schedule, zoneChoice, dayChoice) {
-		return (
-			<div>
-				Start:
-				<TimeInput initTime={`${schedule.startHour}:${schedule.startMinute}`}
-					className="time-input"
-					onTimeChange={(value) => this.updateStartTime(value, zoneChoice, dayChoice)}/>
-				<select value={schedule.startAmPm} onChange={(event) => this.updateStartAmPm(event.target.value, zoneChoice, dayChoice)}>
-					<option value={"AM"}>AM</option>
-					<option value={"PM"}>PM</option>
-				</select>
-				<br/>
-				End:
-				<TimeInput initTime={`${schedule.endHour}:${schedule.endMinute}`}
-					className="time-input"
-					onTimeChange={(value) => this.updateEndTime(value, zoneChoice, dayChoice)}/>
-				<select value={schedule.endAmPm} onChange={(event) => this.updateEndAmPm(event.target.value, zoneChoice, dayChoice)}>
-					<option value="AM">AM</option>
-					<option value="PM">PM</option>
-				</select>
-				<br/>
-			</div>
-		);
+	// given a start or end time, a zone, and a day, update the hardware
+	onIndividualTimeChange = (occOrUnocc, dayChoice, zoneChoice, timeMoment, timeString) => {
+		const [hourMinute, amOrPmStr] = timeMoment.format('h:mm A').toString().split(" ");
+		const [hour, minute] = hourMinute.split(":");
+		const amOrPm = (amOrPmStr === 'PM' ? 1 : 0);
+		this.props.onZoneUpdate(hour, `${DAY_NAMES[dayChoice]}${occOrUnocc}Hour`, zoneChoice);
+		this.props.onZoneUpdate(minute, `${DAY_NAMES[dayChoice]}${occOrUnocc}Minute`, zoneChoice);
+		this.props.onZoneUpdate(amOrPm, `${DAY_NAMES[dayChoice]}${occOrUnocc}AmPm`, zoneChoice);
 	}
 
-	renderAllTimePicker = (schedules, zoneChoice) => {
-		if (zoneChoice === 'All') return <div></div>;
-		let allSchedules = {};
-		Object.keys(schedules[zoneChoice][Object.keys(schedules[zoneChoice])[0]]).forEach( (startOrEndTime) => {
-			console.log('StartOrEndTime', startOrEndTime);
-			allSchedules[startOrEndTime] = this.allEqual(schedules[zoneChoice],startOrEndTime);
-		} );
-		console.log('All schedules: ', allSchedules);
-		return (
-			<div>
-				Start:
-				<TimeInput initTime={`${allSchedules.startHour}:${allSchedules.startMinute}`}
-					className="time-input"
-					onTimeChange={(value) => this.updateAllStartTimes(value, zoneChoice)}/>
-				<select value={allSchedules.startAmPm} onChange={(event) => this.updateAllStartAmPm(event.target.value, zoneChoice)}>
-					<option value="AM">AM</option>
-					<option value="PM">PM</option>
-					<option value=""></option>
-				</select>
-				<br/>
-				End:
-				<TimeInput initTime={`${allSchedules.endHour}:${allSchedules.endMinute}`}
-					className="time-input"
-					onTimeChange={(value) => this.updateAllEndTime(value, zoneChoice)}/>
-				<select value={allSchedules.endAmPm} onChange={(event) => this.updateAllEndAmPm(event.target.value, zoneChoice)}>
-					<option value="AM">AM</option>
-					<option value="PM">PM</option>
-					<option value=""></option>
-				</select>
-				<br/>
-			</div>
-		)
-	}
+	// given an array of zones and an array of days, if they all have the same moment, return it; otherwise, return
+	// an empty object
+	allEqual = (moments, startOrEndMoment, zoneArray, dayArray) => {
 
-	allEqual = (zoneSchedule,startOrEndTime) => {
-		const zoneScheduleKeys = Object.keys(zoneSchedule);
-		const firstDayVal = zoneSchedule[zoneScheduleKeys[0]][startOrEndTime];
-		console.log('zone schedule: ', zoneSchedule);
-		console.log('startOrEndTime: ', startOrEndTime);
-		console.log('firstDayVal: ', firstDayVal);
-		const allEq = zoneScheduleKeys.map( (day) => {
+		const firstMoment = moments[zoneArray[0]][dayArray[0]][startOrEndMoment];
 
-			console.log('day: ', day);
-			console.log(zoneSchedule[day][startOrEndTime]);
-			if (zoneSchedule[day][startOrEndTime] === firstDayVal) return true;
-			console.log('false');
-			return false;
+		const allEq = zoneArray.map( (zone) => {
+			return dayArray.map( (day ) => {
+				if (firstMoment.isSame(moments[zone][day][startOrEndMoment])) return true;
+				return false;
+			} ).reduce( (allEq, eq) => {
+				if (allEq && eq) return true;
+				return false;
+			}, true)
 		} ).reduce( (allEqual, equal) => {
 			if(allEqual && equal) return true;
 			return false;
 		}, true);
-		return allEq ? firstDayVal : "";
+
+		return allEq ? firstMoment : null;
 	}
 
-	updateStartTime = (value, zoneChoice, dayChoice) => {
-		let [hour, minute] = value.split(":")
-		this.props.onZoneUpdate(hour, `${DAY_NAMES[dayChoice]}OccupiedHour`, zoneChoice);
-		this.props.onZoneUpdate(minute, `${DAY_NAMES[dayChoice]}OccupiedMinute`, zoneChoice);
-	}
-	updateStartAmPm = (value, zoneChoice, dayChoice) => {
-		const value_int = (value === 'PM' ? 1 : 0);
-		this.props.onZoneUpdate(value_int, `${DAY_NAMES[dayChoice]}OccupiedAmPm`, zoneChoice);
-	}
-	updateEndTime = (value, zoneChoice, dayChoice) => {
-		let [hour, minute] = value.split(":")
-		this.props.onZoneUpdate(hour, `${DAY_NAMES[dayChoice]}UnoccupiedHour`, zoneChoice);
-		this.props.onZoneUpdate(minute, `${DAY_NAMES[dayChoice]}UnoccupiedMinute`, zoneChoice);
-	}
-	updateEndAmPm = (value, zoneChoice, dayChoice) => {
-		const value_int = (value === 'PM' ? 1 : 0);
-		this.props.onZoneUpdate(value_int, `${DAY_NAMES[dayChoice]}UnoccupiedAmPm`, zoneChoice);
-	}
-	updateAllStartTimes = (value, zoneChoice) => {
-		Object.keys(DAY_NAMES).forEach( (day) => {
-			this.updateStartTime(value, zoneChoice, day);
+	render = () => {
+    const zones = getZonesForCurrentSystem(this.props.deviceShadow);
+    const schedules = getSchedulesForCurrentSystem(this.props.deviceShadow);
+		let moments = getMomentsForCurrentSchedules(schedules);
+		console.log('moments: ', moments);
+
+		const zoneIds = Object.keys(zones);
+		const zoneChoices = ["All", ...zoneIds];
+		let zoneArrays = [];
+		zoneArrays["All"] = [...zoneIds];
+		zoneIds.forEach( (zone) => {
+			zoneArrays[zone] = [zone];
 		} )
-	}
-	updateAllStartAmPm = (value, zoneChoice) => {
-		Object.keys(DAY_NAMES).forEach( (day) => {
-			this.updateStartAmPm(value, zoneChoice, day);
+		console.log('zoneArrays: ', zoneArrays);
+
+		let dayChoices = ["All", "Weekdays"];
+		const days = Object.keys(DAY_NAMES);
+		dayChoices = [...dayChoices, ...days];
+		let dayArrays = [];
+		dayArrays["All"] = [...days];
+		dayArrays["Weekdays"] = [...days.slice(0,5)];
+		days.forEach( (day) => {
+			dayArrays[day] = [day];
 		} )
-	}
-	updateEndTimes = (value, zoneChoice) => {
-		Object.keys(DAY_NAMES).forEach( (day) => {
-			this.updateEndTime(value, zoneChoice, day);
+		console.log('dayArrays: ', dayArrays);
+
+		// add moments for zone:all, day:all,weekdays
+		Object.keys(dayArrays).forEach( (dayChoice) => {
+			Object.keys(zoneArrays).forEach( (zoneChoice) => {
+				if(zoneChoice === "All" || dayChoice === "All" || dayChoice === "Weekdays") {
+					moments[zoneChoice] = moments[zoneChoice] || {};
+					moments[zoneChoice][dayChoice] = moments[zoneChoice][dayChoice] || {};
+					moments[zoneChoice][dayChoice].startMoment = this.allEqual(moments, 'startMoment', zoneArrays[zoneChoice], dayArrays[dayChoice]);
+					moments[zoneChoice][dayChoice].endMoment = this.allEqual(moments, 'endMoment', zoneArrays[zoneChoice], dayArrays[dayChoice]);
+				}
+			} )
 		} )
-	}
-	updateEndAmPm = (value, zoneChoice) => {
-		Object.keys(DAY_NAMES).forEach( (day) => {
-			this.updateEndAmPm(value, zoneChoice, day);
-		} )
+		console.log('moments: ', moments);
+		
+		return (
+			<div>
+				<Nav bsStyle="tabs" activeKey="1" onSelect={this.handleSelect}>
+					<NavItem eventKey="1">Weekly Schedule</NavItem>
+					<NavItem eventKey="2">Vacation Placeholder</NavItem>
+				</Nav>
+				<Well>
+					<Panel>
+						<Table responsive>
+							<thead>
+								<tr>
+									<th key={0}>Zone / Day(s)</th>
+									{dayChoices.map( (dayChoice, index) => {
+										return (
+											<th key={index+1}>{dayChoice}</th>
+										)}
+									)}
+								</tr>
+							</thead>
+							<tbody>
+								{zoneChoices.map( (zoneChoice, index) => {
+									return (
+										<tr key={index}>
+											<td key={0}>{zoneChoice}</td>
+											{dayChoices.map( (dayChoice, ind) => {
+												return (
+													<td key={ind+1}>
+														<TimePicker
+															use12Hours
+															format="h:mm a"
+															value={moments[zoneChoice][dayChoice].startMoment}
+															placeholder="Occ."
+															onChange={this.onArrayTimeChange.bind(this, 'Occupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
+														<br />
+														<TimePicker
+															use12Hours
+															format="h:mm a"
+															value={moments[zoneChoice][dayChoice].endMoment}
+															placeholder="Unocc."
+															onChange={this.onArrayTimeChange.bind(this, 'Unoccupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
+													</td>
+												);
+											}
+											)}
+										</tr>
+									)}
+								)}
+							</tbody>
+						</Table>
+					</Panel>
+				</Well>
+				<div><p>Vacation Placeholder!</p></div>
+			</div>
+		);
 	}
 }
 
