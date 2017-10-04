@@ -67,11 +67,11 @@ export const publishDeviceShadowZoneUpdate = (updatedShadow, zoneId, systemId) =
 export const publishDeviceShadowVacationUpdate = (updatedShadow, systemId) => {
   // If an update is pending for this specific system, replace it with the latest
   // update.
-  let pendingUpdate = PENDING_UPDATES[systemId];
+  const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId]['V'];
   if (pendingUpdate) clearTimeout(pendingUpdate);
 
   const shadowUpdatePayload = getVacUpdatePayload(updatedShadow);
-  pendingUpdate = setTimeout(() => {
+  const nextUpdate = setTimeout(() => {
     const updatePayload = {
       state: {
           reported: shadowUpdatePayload
@@ -82,7 +82,8 @@ export const publishDeviceShadowVacationUpdate = (updatedShadow, systemId) => {
     mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
   }, UPDATE_DEBOUNCE_TIME);
 
-  if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = {};
+	if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = {};
+	PENDING_UPDATES[systemId]['V'] = nextUpdate;
 }
 
 // Update raw shadow with new values in the updateShadowObject.
@@ -229,7 +230,7 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
       //   "S7": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
       // }`));
 
-      // onUpdate(JSON.parse(`{,
+      // onUpdate(JSON.parse(`{
       //   "D": "1,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
       //   "S1": "1,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
       //   "S2": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
@@ -243,7 +244,7 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
       //   "S3": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
       // }`));
 
-      // onUpdate(JSON.parse(`{,
+      // onUpdate(JSON.parse(`{
       //   "D": "3,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
       //   "S1": "3,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
       //   "S2": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
@@ -364,10 +365,14 @@ const parseVacationData = (vacationValues) => {
 		if (vacation.length > 0) {
 			parsedVacationData[index] = {};
 			// moments are mutable, be careful
-			let startDate = moment(`${vacation.month}-${vacation.day}`, "M-D");
-			if (startDate.isSameOrBefore(moment().subtract(1, 'days'))) startDate.add(1, 'years');
+			const startDate = moment(`${vacation.month}-${vacation.day}`, "M-D");
+			const endDate = moment(startDate).add(vacation.length, 'days');
+			if (endDate.isSameOrBefore(moment().subtract(1, 'days'))) {
+				startDate.add(1, 'years');
+				endDate.add(1, 'years');
+			}
 			parsedVacationData[index]['startDate'] = startDate;
-			parsedVacationData[index]['endDate'] = moment(startDate).add(vacation.length, 'days');
+			parsedVacationData[index]['endDate'] = endDate;
 		}
 	} )
 

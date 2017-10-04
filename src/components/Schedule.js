@@ -211,6 +211,16 @@ class Schedule extends Component {
 
 	renderVacationSchedule = (zones) => {
 		const vacations = getVacationsForCurrentSystem(this.props.deviceShadow)
+		const vacArr = Array.from(Object.keys(vacations), (key) => {
+			return {
+				key: key,
+				startDate: vacations[key].startDate,
+				endDate: vacations[key].endDate,
+			}
+		})
+		vacArr.sort( (a, b) => {
+			return b.startDate.isBefore(a.startDate);
+		} )
 		const numVacs = Object.keys(vacations).length;
 		return (
 			<Well>
@@ -225,15 +235,15 @@ class Schedule extends Component {
 							</thead>
 							<tbody>
 								{numVacs > 0 ?
-										Object.keys(vacations).map( (vacKey, index) => {
+										vacArr.map( (vac, index) => {
 											return (
 												<tr key={index}>
 													<td style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>{index+1}</td>
 													<td style={{padding: '16px 8px'}}>
-														<RangePicker value={[vacations[vacKey].startDate, vacations[vacKey].endDate]}
-															onChange={this.updateVacation.bind(this,vacKey)} />
+														<RangePicker value={[vac.startDate, vac.endDate]}
+															onChange={this.updateVacation.bind(this,vac.key)} />
 														<Button bsStyle="danger" bsSize="small" style={{margin: '0px 20px'}}
-															onClick={this.deleteVacation.bind(this,vacKey)}>Remove</Button>
+															onClick={this.deleteVacation.bind(this,vac.key)}>Remove</Button>
 													</td>
 												</tr>
 											)
