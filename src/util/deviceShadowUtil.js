@@ -42,7 +42,7 @@ const createBaseRequestMessage = (systemNumber) => {
   return `{"state": {"reported":{"R":"${systemNumber},0,"}}}`;
 }
 
-export const publishDeviceShadowUpdate = (updatedShadow, zoneId, systemId) => {
+export const publishDeviceShadowZoneUpdate = (updatedShadow, zoneId, systemId) => {
   // If an update is pending for this specific system/zone, replace it with the latest
   // update.
   const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId][zoneId];
@@ -62,6 +62,27 @@ export const publishDeviceShadowUpdate = (updatedShadow, zoneId, systemId) => {
 
   if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = {};
   PENDING_UPDATES[systemId][zoneId] = nextUpdate;
+}
+
+export const publishDeviceShadowVacationUpdate = (updatedShadow, systemId) => {
+  // If an update is pending for this specific system, replace it with the latest
+  // update.
+  let pendingUpdate = PENDING_UPDATES[systemId];
+  if (pendingUpdate) clearTimeout(pendingUpdate);
+
+  const shadowUpdatePayload = getVacUpdatePayload(updatedShadow);
+  pendingUpdate = setTimeout(() => {
+    const updatePayload = {
+      state: {
+          reported: shadowUpdatePayload
+      }
+    };
+
+		console.log("Published: ", updatePayload);
+    mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
+  }, UPDATE_DEBOUNCE_TIME);
+
+  if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = {};
 }
 
 // Update raw shadow with new values in the updateShadowObject.
@@ -86,7 +107,34 @@ export const updateRawDeviceShadow = (rawShadow, updateShadowObject) => {
       });
 
       rawShadow[key] = rawValuesArr.join(',') + ',';
-    }
+		} else if (key === 'V') {
+			const SYS_OFFSET = 1;
+			const LENGTH_OFFSET = 0;
+			const MONTH_OFFSET = 1;
+			const DAY_OFFSET = 2;
+
+			const updateVacations = updateShadowObject.vacations;
+
+      let rawValues = rawShadow[key];
+      if (rawValues.charAt(rawValues.length - 1) === ',') {
+        rawValues = rawValues.slice(0, -1);
+      }
+      const rawValuesArr = rawValues.split(',');
+
+			for (let i=0; i < 20; i++) {
+				if (updateVacations[i]) {
+					rawValuesArr[SYS_OFFSET+3*i+LENGTH_OFFSET] = updateVacations[i].endDate.diff(updateVacations[i].startDate, 'days');
+					rawValuesArr[SYS_OFFSET+3*i+MONTH_OFFSET] = updateVacations[i].startDate.format("M");
+					rawValuesArr[SYS_OFFSET+3*i+DAY_OFFSET] = updateVacations[i].startDate.format("D");
+				} else {
+					rawValuesArr[SYS_OFFSET+3*i+LENGTH_OFFSET] = 0;
+					rawValuesArr[SYS_OFFSET+3*i+MONTH_OFFSET] = 1;
+					rawValuesArr[SYS_OFFSET+3*i+DAY_OFFSET] = 1;
+				}
+			}
+
+      rawShadow[key] = rawValuesArr.join(',') + ',';
+		}
   });
 
   return rawShadow;
@@ -96,6 +144,7 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
   let parsedDeviceShadow = {
     zones: {},
     diagnostics: {},
+		vacations: {},
   };
 
   let systemNumber;
@@ -118,6 +167,11 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
     } else if (key === 'DIS') {
       const discoverData = parseDiscoverData(valuesArr);
       parsedDeviceShadow.discover = discoverData;
+      systemNumber = valuesArr[0];
+    } else if (key === 'V') {
+      const vacationData = parseVacationData(valuesArr);
+      parsedDeviceShadow.vacations = vacationData;
+      systemNumber = valuesArr[0];
     } else {
       // It is important to always have the relevant system number, even if we have
       // an update containing an unexpected key.
@@ -175,7 +229,7 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
       //   "S7": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
       // }`));
 
-      // onUpdate(JSON.parse(`{
+      // onUpdate(JSON.parse(`{,
       //   "D": "1,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
       //   "S1": "1,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
       //   "S2": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
@@ -189,7 +243,7 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
       //   "S3": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
       // }`));
 
-      // onUpdate(JSON.parse(`{
+      // onUpdate(JSON.parse(`{,
       //   "D": "3,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
       //   "S1": "3,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
       //   "S2": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
@@ -289,6 +343,37 @@ const parseDiscoverData = (discoverValues) => {
   };
 }
 
+const parseVacationData = (vacationValues) => {
+	const SYS_OFFSET = 1;
+	const LENGTH_OFFSET = 0;
+	const MONTH_OFFSET = 1;
+	const DAY_OFFSET = 2;
+
+	let parsedVacationData = {};
+
+	// max of 20 vacations at any time
+	let vacationDataArray = Array.from(new Array(20), (x,i) => {
+		return {
+			length: vacationValues[SYS_OFFSET+3*i+LENGTH_OFFSET],
+			month: vacationValues[SYS_OFFSET+3*i+MONTH_OFFSET],
+			day: vacationValues[SYS_OFFSET+3*i+DAY_OFFSET]
+		}
+	})
+
+	vacationDataArray.forEach( (vacation, index) => {
+		if (vacation.length > 0) {
+			parsedVacationData[index] = {};
+			// moments are mutable, be careful
+			let startDate = moment(`${vacation.month}-${vacation.day}`, "M-D");
+			if (startDate.isSameOrBefore(moment().subtract(1, 'days'))) startDate.add(1, 'years');
+			parsedVacationData[index]['startDate'] = startDate;
+			parsedVacationData[index]['endDate'] = moment(startDate).add(vacation.length, 'days');
+		}
+	} )
+
+  return parsedVacationData;
+}
+
 // Get specific zone update payload, needed so we only send exactly what
 // has updated. Payload size must be kept to a minimum.
 const getZoneUpdatePayload = (rawShadow, zoneId) => {
@@ -303,6 +388,18 @@ const getZoneUpdatePayload = (rawShadow, zoneId) => {
   });
 
   return zoneUpdatePayload;
+}
+// Get specific vacation update payload, needed so we only send exactly what
+// has updated. Payload size must be kept to a minimum.
+const getVacUpdatePayload = (rawShadow) => {
+  let updatePayload = {};
+  Object.keys(rawShadow).forEach((key) => {
+    if (key === 'V') {
+        updatePayload[key] = rawShadow[key];
+		}
+	});
+
+  return updatePayload;
 }
 
 // Given a device shadow object, return the zones that apply to the currently displayed
@@ -403,7 +500,14 @@ const formatHourOrMinuteString = (numberString) => {
 }
 
 export const getVacationsForCurrentSystem = (deviceShadow) => {
-  return null;
+  const systemNumber = getCurrentSystemNumber();
+  const currentSystem = deviceShadow[systemNumber];
+  if (currentSystem) {
+    return currentSystem.vacations
+  } else {
+    requestDeviceShadowForSystem(systemNumber);
+    return undefined;
+  }
 }
 
 const requestDeviceShadowForSystem = (systemNumber) => {

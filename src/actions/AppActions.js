@@ -24,9 +24,13 @@ export const updateZone = (value, updateAttribute, zoneId) => {
   }
 }
 
-export const updateVacationSchedule = (systemId) => {
+export const updateVacationSchedule = (vacationKey, dates) => {
   return {
-    type: Actions.UPDATE_VACATION_SCHEDULE
+    type: Actions.UPDATE_VACATION_SCHEDULE,
+		payload: {
+			vacationKey,
+			dates
+		}
   }
 }
 

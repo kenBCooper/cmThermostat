@@ -50,6 +50,7 @@ export const STAT_PARSE_LIST = {
   47: 'sundayUnoccupiedHour',
   48: 'sundayUnoccupiedMinute',
   49: 'sundayUnoccupiedAmPm',
+	52: 'vacationEnabled',
   53: 'zoneStatus',
   54: 'zoneCall',
   56: 'standaloneThermostat',

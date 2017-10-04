@@ -1,8 +1,13 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import { Nav, NavItem, Well, Panel, Table } from 'react-bootstrap';
-import { updateZone } from '../actions/AppActions';
-import { TimePicker } from 'antd';
+import { Button } from 'react-bootstrap';
+import { updateZone, updateVacationSchedule } from '../actions/AppActions';
+import { LocaleProvider, TimePicker, DatePicker } from 'antd';
+import locales from 'antd/lib/locale-provider/en_US';
+import moment from 'moment';
+
 // import moment from 'moment';
 
 // import LoadingIndicator from './LoadingIndicator';
@@ -11,6 +16,7 @@ import {
   getZonesForCurrentSystem,
   getSchedulesForCurrentSystem,
 	getMomentsForCurrentSchedules,
+	getVacationsForCurrentSystem,
 } from '../util/deviceShadowUtil';
 import { DAY_NAMES } from '../constants/ScheduleConstants';
 
@@ -19,13 +25,16 @@ import './Panel.css';
 import './Table.css';
 import './Schedule.css';
 
+const { RangePicker } = DatePicker;
+moment.locale('en');
+
 class Schedule extends Component {
 	state = {
-		eventKey: '1',
+		activeKey: '1',
   }
 
 	handleSelect = (eventKey) => {
-		this.setState({ eventKey });
+		this.setState({ activeKey: eventKey });
 	}
 
 	// given a start or end time and an array of zones and/or days, update the hardware
@@ -91,9 +100,7 @@ class Schedule extends Component {
 		return disabled;
 	}
 
-	render = () => {
-
-    const zones = getZonesForCurrentSystem(this.props.deviceShadow);
+	renderWeeklySchedule = (zones) => {
     const schedules = getSchedulesForCurrentSystem(this.props.deviceShadow);
 		let moments = getMomentsForCurrentSchedules(schedules);
 
@@ -126,64 +133,142 @@ class Schedule extends Component {
 				}
 			} )
 		} )
-		
+
 		return (
-			<div>
-				<UnderDevelopmentBanner />
-				<Nav bsStyle="tabs" activeKey="1" onSelect={this.handleSelect}>
-					<NavItem eventKey="1">Weekly Schedule</NavItem>
-					<NavItem eventKey="2">Vacation Placeholder</NavItem>
-				</Nav>
-				<Well>
-					<Panel>
+			<Well>
+				<Panel>
+					<Table responsive>
+						<thead>
+							<tr>
+								<th key={0} style={{fontSize: '16px'}}>Zone / Day(s)</th>
+								{dayChoices.map( (dayChoice, index) => {
+									return (
+										<th key={index+1} style={{fontSize: '16px'}}>{dayChoice}</th>
+									)}
+								)}
+							</tr>
+						</thead>
+						<tbody>
+							{zoneChoices.map( (zoneChoice, index) => {
+								return (
+									<tr key={index}>
+										<td key={0} style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>{zoneChoice}</td>
+										{dayChoices.map( (dayChoice, ind) => {
+											return (
+												<td key={ind+1} style={{padding: '16px 8px'}}>
+													<TimePicker
+														use12Hours
+														format="h:mm a"
+														value={moments[zoneChoice][dayChoice].startMoment}
+														placeholder="Occ."
+														disabledMinutes={this.disabledMinutes}
+														hideDisabledOptions
+														onChange={this.onArrayTimeChange.bind(this, moments, 'Occupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
+													<br />
+													<TimePicker
+														use12Hours
+														format="h:mm a"
+														value={moments[zoneChoice][dayChoice].endMoment}
+														placeholder="Unocc."
+														disabledMinutes={this.disabledMinutes}
+														hideDisabledOptions
+														onChange={this.onArrayTimeChange.bind(this, moments, 'Unoccupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
+												</td>
+											);
+										}
+										)}
+									</tr>
+								)}
+							)}
+						</tbody>
+					</Table>
+				</Panel>
+			</Well>
+		)
+	}
+
+	newVacation = (existingKeyArr, dates, dateStrings) => {
+		let i = 0;
+		console.log(existingKeyArr);
+		while (i < 20) {
+			console.log("i: ", i);
+			if (!existingKeyArr.includes(i.toString())) break;
+			i += 1;
+		}
+		console.log("i: ", i);
+		this.updateVacation(i.toString(), dates, dateStrings);
+	}
+	updateVacation = (vacationKey, dates, dateStrings) => {
+		if (dates.length === 0) {
+			this.deleteVacation(vacationKey);
+		} else {
+			this.props.onVacationUpdate(vacationKey, dates);
+		}
+	}
+	deleteVacation = (vacationKey) => {
+		this.props.onVacationUpdate(vacationKey, [new moment("1-1", "M-D"), new moment("1-1", "M-D")]);
+	}
+
+	renderVacationSchedule = (zones) => {
+		const vacations = getVacationsForCurrentSystem(this.props.deviceShadow)
+		const numVacs = Object.keys(vacations).length;
+		return (
+			<Well>
+				<Panel>
+					<LocaleProvider locale={locales}>
 						<Table responsive>
 							<thead>
-								<tr>
-									<th key={0} style={{fontSize: '16px'}}>Zone / Day(s)</th>
-									{dayChoices.map( (dayChoice, index) => {
-										return (
-											<th key={index+1} style={{fontSize: '16px'}}>{dayChoice}</th>
-										)}
-									)}
+								<tr style={{fontSize: '16px'}}>
+									<th>#</th>
+									<th>Start Date ~ End Date</th>
 								</tr>
 							</thead>
 							<tbody>
-								{zoneChoices.map( (zoneChoice, index) => {
-									return (
-										<tr key={index}>
-											<td key={0} style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>{zoneChoice}</td>
-											{dayChoices.map( (dayChoice, ind) => {
-												return (
-													<td key={ind+1} style={{padding: '16px 8px'}}>
-														<TimePicker
-															use12Hours
-															format="h:mm a"
-															value={moments[zoneChoice][dayChoice].startMoment}
-															placeholder="Occ."
-															disabledMinutes={this.disabledMinutes}
-															hideDisabledOptions
-															onChange={this.onArrayTimeChange.bind(this, moments, 'Occupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
-														<br />
-														<TimePicker
-															use12Hours
-															format="h:mm a"
-															value={moments[zoneChoice][dayChoice].endMoment}
-															placeholder="Unocc."
-															disabledMinutes={this.disabledMinutes}
-															hideDisabledOptions
-															onChange={this.onArrayTimeChange.bind(this, moments, 'Unoccupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
+								{numVacs > 0 ?
+										Object.keys(vacations).map( (vacKey, index) => {
+											return (
+												<tr key={index}>
+													<td style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>{index+1}</td>
+													<td style={{padding: '16px 8px'}}>
+														<RangePicker value={[vacations[vacKey].startDate, vacations[vacKey].endDate]}
+															onChange={this.updateVacation.bind(this,vacKey)} />
+														<Button bsStyle="danger" bsSize="small" style={{margin: '0px 20px'}}
+															onClick={this.deleteVacation.bind(this,vacKey)}>Remove</Button>
 													</td>
-												);
-											}
-											)}
-										</tr>
-									)}
-								)}
+												</tr>
+											)
+										}) : null
+								}
+								{numVacs < 20 ? (
+									<tr>
+										<td style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>
+											{numVacs+1}
+										</td>
+										<td style={{padding: '16px 8px'}}>
+											<RangePicker value={null} placeholder={["Start date", "End date"]} onChange={this.newVacation.bind(this,Object.keys(vacations))} />
+										</td>
+									</tr>
+								) : null
+								}
 							</tbody>
 						</Table>
-					</Panel>
-				</Well>
-				<div><p>Vacation Placeholder!</p></div>
+					</LocaleProvider>
+				</Panel>
+			</Well>
+		)
+	}
+
+	render = () => {
+		const zones = getZonesForCurrentSystem(this.props.deviceShadow);
+
+		return (
+			<div>
+				<UnderDevelopmentBanner />
+				<Nav bsStyle="tabs" activeKey={this.state.activeKey} onSelect={this.handleSelect}>
+					<NavItem eventKey="1">Weekly Schedule</NavItem>
+					<NavItem eventKey="2">Vacations</NavItem>
+				</Nav>
+				{this.state.activeKey === "1" ? this.renderWeeklySchedule(zones) : this.renderVacationSchedule(zones)}
 			</div>
 		);
 	}
@@ -195,10 +280,10 @@ const mapStateToProps = (state) => {
 	}
 };
 const mapDispatchToProps = (dispatch) => {
-  return {
-    onZoneUpdate: (value, zoneAttribute, zoneId) => 
-      dispatch(updateZone(value, zoneAttribute, zoneId))
-  }
+	return bindActionCreators({
+		onZoneUpdate: updateZone,
+		onVacationUpdate: updateVacationSchedule
+	}, dispatch);
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(Schedule);
