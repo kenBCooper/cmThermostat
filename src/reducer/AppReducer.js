@@ -2,7 +2,8 @@ import * as Actions from '../constants/ActionTypes';
 import { 
   parseDeviceShadow,
   updateRawDeviceShadow,
-  publishDeviceShadowUpdate,
+  publishDeviceShadowZoneUpdate,
+  publishDeviceShadowVacationUpdate,
 } from '../util/deviceShadowUtil';
 import { getCurrentSystemNumber } from '../util/urlUtil';
 
@@ -22,6 +23,7 @@ const DEFAULT_STATE = {
       zones: undefined,
       diagnostics: undefined,
       discover: undefined,
+			vacations: undefined,
     },
   }
 };
@@ -39,6 +41,8 @@ const appReducer = (state = DEFAULT_STATE, action) => {
       return setConnectedStatus(state, action);
     case Actions.UPDATE_ZONE:
       return updateZone(state, action);
+    case Actions.UPDATE_VACATION_SCHEDULE:
+      return updateVacation(state, action);
     default:
       return state;
   }
@@ -77,7 +81,11 @@ const receiveDeviceShadowUpdate = (state, action) => {
         discover: {
           ...state.shadow[systemNumber].discover,
           ...updatedShadowState.discover,
-        }
+        },
+				vacations: {
+					...state.shadow[systemNumber].vacations,
+					...updatedShadowState.vacations
+				}
       } 
     }
   // If shadow data for a new system is being added for the first time,
@@ -94,7 +102,10 @@ const receiveDeviceShadowUpdate = (state, action) => {
         },
         discover: {
           ...updatedShadowState.discover,
-        }
+				},
+				vacations: {
+					...updatedShadowState.vacations,
+				}
       } 
     }
   }
@@ -144,7 +155,49 @@ const updateZone = (state, action) => {
     state.rawShadow[currentSystemNumber], updatedDeviceShadowState[currentSystemNumber]);
 
   // Publish an update to the external device shadow using our updated raw state.
-  publishDeviceShadowUpdate(updatedRawShadow, updateZoneId, currentSystemNumber);
+  publishDeviceShadowZoneUpdate(updatedRawShadow, updateZoneId, currentSystemNumber);
+
+  // Optimistically update local state with changes while update to device shadow
+  // is pending.
+  return {
+    ...state,
+    rawShadow: {
+      ...state.rawShadow,
+      [currentSystemNumber]: updatedRawShadow,
+    },
+    shadow: updatedDeviceShadowState,
+  }
+}
+
+const updateVacation = (state, action) => {
+	const updateVacKey = action.payload.vacationKey;
+	const updateStartDate = action.payload.dates[0];
+	const updateEndDate = action.payload.dates[1];
+	const currentSystemNumber = getCurrentSystemNumber();
+
+	let updatedDeviceShadowState = {
+		...state.shadow,
+		[currentSystemNumber]: {
+			...state.shadow[currentSystemNumber],
+			vacations: {
+				...state.shadow[currentSystemNumber].vacations,
+				[updateVacKey]: {
+					startDate: updateStartDate,
+					endDate: updateEndDate
+				}
+			}
+		}
+	}
+	if (updateStartDate.diff(updateEndDate,"days") === 0 && updateStartDate.format("M-D") === "1-1") {
+		delete updatedDeviceShadowState[currentSystemNumber].vacations[updateVacKey];
+	}
+
+  // Update the raw device shadow.
+  const updatedRawShadow = updateRawDeviceShadow(
+    state.rawShadow[currentSystemNumber], updatedDeviceShadowState[currentSystemNumber]);
+
+  // Publish an update to the external device shadow using our updated raw state.
+  publishDeviceShadowVacationUpdate(updatedRawShadow, currentSystemNumber);
 
   // Optimistically update local state with changes while update to device shadow
   // is pending.
