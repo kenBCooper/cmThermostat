@@ -41,19 +41,21 @@ class AppPanel extends Component {
 
   render() {
     return (
-      <div ref="appPanel" className={this.props.isLoggedIn ? "app-panel" : ""}>
-        {this.props.isLoggedIn ? (
-          <div className="app-panel-header">
-            <NavHeader />
+      <div className={this.props.isLoggedIn ? "app-panel-container" : ""}>
+        <div ref="appPanel" className={this.props.isLoggedIn ? "app-panel" : ""}>
+          {this.props.isLoggedIn ? (
+            <div className="app-panel-header">
+              <NavHeader />
+            </div>
+          ) : null}
+          {this.props.isLoggedIn ? (
+            <div className="app-panel-sidebar">
+              <NavSidebar maxHeight={this.state.maxSidebarHeight}/>
+            </div>
+          ) : null}
+          <div className="app-panel-workspace">
+            {this.props.children}
           </div>
-        ) : null}
-        {this.props.isLoggedIn ? (
-          <div className="app-panel-sidebar">
-            <NavSidebar maxHeight={this.state.maxSidebarHeight}/>
-          </div>
-        ) : null}
-        <div className="app-panel-workspace">
-          {this.props.children}
         </div>
       </div>
     );

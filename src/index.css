@@ -10,6 +10,12 @@ body {
   background-color: #c6eaff
 }
 
+@media screen and (min-width: 645px) {
+  body {
+    overflow-x: hidden;
+  }
+}
+
 .bold {
 	font-weight: bold;
 }

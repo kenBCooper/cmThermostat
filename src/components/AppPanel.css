@@ -1,7 +1,12 @@
+.app-panel-container {
+  display: inline-block;
+}
+
 .app-panel {
+  width: calc(100vw - 40px);
   min-width: 605px;
   min-height: 637px;
-  margin: 15px 15px;
+  margin: 20px 20px;
 
   border-radius: 10px;
   display: grid;

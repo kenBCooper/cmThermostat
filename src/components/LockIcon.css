@@ -1,0 +1,9 @@
+.lock-icon {
+  height: 22px;
+  margin-bottom: -5px;
+  fill: #dadada;
+}
+
+.lock-icon.unlocked {
+  fill: #55aedc;
+}

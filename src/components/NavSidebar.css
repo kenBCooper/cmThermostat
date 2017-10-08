@@ -43,10 +43,11 @@
 
 .nav-text {
   color: white;
+  font-size: 14px;
   font-weight: 100;
   padding: 3px;
   padding-left: 30px;
-  letter-spacing: 0.25px;
+  letter-spacing: 1px;
 }
 
 .nav-text:hover {

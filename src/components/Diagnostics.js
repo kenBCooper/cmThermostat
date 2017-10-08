@@ -5,6 +5,7 @@ import { Table, Button } from 'react-bootstrap';
 
 import LoadingIndicator from './LoadingIndicator';
 import ThermostatActionIcon from './ThermostatActionIcon';
+import LockIcon from './LockIcon';
 import { 
   getDiagnosticForCurrentSystem,
   getZonesForCurrentSystem
@@ -28,11 +29,6 @@ const ZONE_STATUS_DISPLAY_STRINGS = {
   1: 'NO DAMPER',
   2: 'STAT RF ERROR / DEAD BAT',
   3: 'STAT LOW BAT',
-}
-
-const LOCK_STATUS_DISPLAY_STRINGS = {
-  0: 'UNLOCKED',
-  1: 'LOCKED',
 }
 
 const STANDALONE_VALUE = '2';
@@ -197,7 +193,9 @@ const Diagnostics = (props) => {
                   <td className="custom-table-cell">{`${zoneId}`}</td>
 									<td className="custom-table-cell">{getZoneVoteString(zonePriority, zoneCall)}</td>
 									<td onClick={() => toggleZoneLock(zoneId, zoneStatusLocked)}
-                      className="custom-table-cell zone-lock">{zoneStatusLocked}</td>
+                      className="custom-table-cell zone-lock">
+                    <LockIcon lockStatus={zoneStatusLocked}/>
+                  </td>
 									<td className="custom-table-cell zone-status">{`${zoneStatusDisplay}`}</td>
 								</tr>
 							)
