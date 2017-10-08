@@ -1,17 +1,18 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { updateZone } from '../actions/AppActions';
-import { Panel, Table, ToggleButtonGroup, ToggleButton, Button } from 'react-bootstrap';
+import { Table, Button } from 'react-bootstrap';
 
 import LoadingIndicator from './LoadingIndicator';
-import UnderDevelopmentBanner from './UnderDevelopmentBanner';
+import ThermostatActionIcon from './ThermostatActionIcon';
 import { 
   getDiagnosticForCurrentSystem,
   getZonesForCurrentSystem
 } from '../util/deviceShadowUtil';
 
-import './Panel.css';
 import './Table.css';
+import './List.css';
+import './Diagnostics.css';
 
 const STATUS_DISPLAY_STRINGS = {
   0: 'OFF',
@@ -34,94 +35,180 @@ const LOCK_STATUS_DISPLAY_STRINGS = {
   1: 'LOCKED',
 }
 
+const STANDALONE_VALUE = '2';
+const LONG_TEXT_CUTOFF = 4;
+
 const Diagnostics = (props) => {
   const diagnostics = getDiagnosticForCurrentSystem(props.deviceShadow);
   const zones = getZonesForCurrentSystem(props.deviceShadow)
   if (!diagnostics || !zones) {
     return <LoadingIndicator />;
   } else {
-		const setZoneLockStatus = (value, zoneId) => {
-			props.onZoneUpdate( value.toString(), 'lockStatus', zoneId );
-		}
+    // There are two ways to use this function, either give the current lock status
+    // (currLockStatus) rely on the funtion to automatically toggle to the opposite
+    // lock status, or explicitly pass in a lock status to set the zone to (setToLockStatus).
+    const toggleZoneLock = (zoneId, currLockStatus, setToLockStatus) => {
+      let nextLockStatus;
+      if (setToLockStatus) {
+        nextLockStatus = setToLockStatus;
+      } else {
+        nextLockStatus = currLockStatus === '0' ? '1' : '0';
+      }
+
+      props.onZoneUpdate( nextLockStatus, 'lockStatus', zoneId );
+    }
+
 		const unlockAllZones = () => {
 			Object.keys(zones).forEach((zoneId) => {
-				setZoneLockStatus( 0, zoneId );
-			});
-		};
-		const lockAllZones = () => {
-			Object.keys(zones).forEach((zoneId) => {
-				setZoneLockStatus( 1, zoneId );
+				toggleZoneLock(zoneId, undefined, '0' );
 			});
 		};
 
+		const lockAllZones = () => {
+			Object.keys(zones).forEach((zoneId) => {
+				toggleZoneLock(zoneId, undefined, '1');
+			});
+		};
+
+    const renderSystemDiagnosticTempItem = (value, headerText) => {
+      return (
+        <div className="system-diagnostic-item">
+          <div className="system-diagnostic-item-header">{headerText}:</div>
+          <div className="system-diagnostic-item-value">{value}</div>
+        </div>
+      );
+    }
+
+    // For the status section - we either have text values (VENT, CHANGEOVER, etc.),
+    // or we show the heat/cool icon.
+    const renderSystemDiagnosticStatusItem = (value, headerText) => {
+      let heatCoolIcon = undefined;
+      // Cool symbol
+      if (value === STATUS_DISPLAY_STRINGS[2]) {
+        heatCoolIcon = (
+          <ThermostatActionIcon medium={true} showCool={true} />
+        );
+      }
+      // Heat symbol
+      if (value === STATUS_DISPLAY_STRINGS[3]) {
+        heatCoolIcon = (
+          <ThermostatActionIcon medium={true} showHeat={true} />
+        );
+      }
+
+      return (
+        <div className="system-diagnostic-item">
+          <div className="system-diagnostic-item-header">{headerText}:</div>
+          <div className={
+            "system-diagnostic-item-value" + (value.length > LONG_TEXT_CUTOFF ? ' long-text' : '')
+          }>
+            {heatCoolIcon ? heatCoolIcon : value}
+          </div>
+        </div>
+      );
+    }
+
+    const renderSystemDiagnostics = (diagnostics) => {
+      return (
+        <div>
+          <span className="custom-list-header">System Diagnostics</span>
+          <ul className="custom-list">
+            <li>{renderSystemDiagnosticTempItem(`${diagnostics.leavingAir}°`, 'Leaving Air')}</li>
+            <li>{renderSystemDiagnosticTempItem(`${diagnostics.returnAir}°`, 'Return Air')}</li>
+            <li>{renderSystemDiagnosticTempItem(`${diagnostics.outsideAir}°`, 'Outside Air')}</li>
+            <li>{
+              renderSystemDiagnosticStatusItem(
+                getStatusDisplay(diagnostics.systemStatus),
+                'Status',
+              )
+            }</li>
+          </ul>
+        </div>
+      );
+    };
+
+    const renderSaStatDiagnostics = (zones) => {
+      const hasSaStat = Object.keys(zones).some((zoneId) => {
+        return zones[zoneId].standaloneThermostat === STANDALONE_VALUE
+      });
+      if (!hasSaStat) return '';
+
+      return (
+        <Table className='custom-table'>
+          <thead className='custom-table-heading'>
+            <tr>
+              <th className='custom-table-heading-cell'>SA Stat</th>
+              <th className='custom-table-heading-cell'>Humidity</th>
+              <th className='custom-table-heading-cell'>Leaving Air</th>
+              <th className='custom-table-heading-cell'>Return Air</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(zones).map((zoneId, index) => {
+              if (zones[zoneId].standaloneThermostat === STANDALONE_VALUE) {
+                const saStatZone = zones[zoneId];
+                return (
+                  <tr key={index}>
+                    <td className="custom-table-cell">{zoneId}</td>
+                    <td className="custom-table-cell">{`${saStatZone.humidity}%`}</td>
+                    <td className="custom-table-cell">{`${saStatZone.leavingAir}°`}</td>
+                    <td className="custom-table-cell">{`${saStatZone.returnAir}°`}</td>
+                  </tr>
+                );
+              } else {
+                return undefined;
+              }
+            })}
+          </tbody>
+        </Table>
+      );
+    }
+
+    const getZoneVoteString = (priority, callCode) => {
+      return (
+        <span>
+          {`${priority} - `}<i>{`${getStatusDisplay(callCode)}`}</i>
+        </span>
+      );
+    }
+
     return (
       <div>
-        <UnderDevelopmentBanner />
-        <Panel className="custom-panel">
-          {diagnostics && (
-            <Table fill className='custom-table'>
-              <thead className='custom-table-heading'>
-                <tr>
-                  <th className='custom-table-heading-cell'>System Diagnostics</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>{`Leaving air: ${diagnostics.leavingAir}°`}</td></tr>
-                <tr><td>{`Return air: ${diagnostics.returnAir}°`}</td></tr>
-                <tr><td>{`Outside air: ${diagnostics.outsideAir}°`}</td></tr>
-                <tr><td>{`Main System Status: ${getStatusDisplay(diagnostics.systemStatus)}`}</td></tr>
-              </tbody>
-            </Table>
-          )}
-        </Panel>
-        <Panel className="custom-panel">
-          <Table fill className='custom-table'>
-            <thead className='custom-table-heading'>
-              <tr>
-                <th className='custom-table-heading-cell' colSpan="4">Thermostat Status</th>
-              </tr>
-            </thead>
-            <tbody>
-							{Object.keys(zones).map((zoneId, index) => {
-								const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
-								const zoneStatusDiagnosticCode = diagnostics[zoneStatusDiagnosticKey];
-								const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
-								const zoneStatusLocked = zones[zoneId].lockStatus;
-								const zoneStatusLockedToggleButtonGroup = (
-									<ToggleButtonGroup type="radio" name="locked" value={parseInt(zoneStatusLocked, 10)} onChange={(value) => setZoneLockStatus(value, zoneId)}>
-										<ToggleButton value={0}>{LOCK_STATUS_DISPLAY_STRINGS[0]}</ToggleButton>
-										<ToggleButton value={1}>{LOCK_STATUS_DISPLAY_STRINGS[1]}</ToggleButton>
-									</ToggleButtonGroup>
-								);
-								let zoneSAStats;
-								if (zones[zoneId].standaloneThermostat === '2' ? 'SA' : '') {
-									zoneSAStats = (
-										<div>
-											<div>{`Humidity: ${zones[zoneId].humidity}%`}</div>
-											<div>{`Leaving air: ${zones[zoneId].leavingAir}°`}</div>
-											<div>{`Return air: ${zones[zoneId].returnAir}°`}</div>
-										</div>
-									);
-								} else {
-									zoneSAStats = (
-										<div></div>
-									);
-								}
-								return(
-									<tr key={index}>
-										<td>{zoneSAStats}</td>
-										<td>{`${zoneId}: ${zoneStatusDisplay}`}</td>
-										<td style={{textAlign:"right"}}>{zoneStatusLockedToggleButtonGroup}</td>
-									</tr>
-								)
-							})}
-							<tr className='all-unlock-lock-table-footer'>
-								<td colSpan="2"><Button onClick={unlockAllZones.bind(this)} block>UNLOCK ALL</Button></td>
-								<td colSpan="2"><Button onClick={lockAllZones.bind(this)} block>LOCK ALL</Button></td>
-							</tr>
-            </tbody>
-          </Table>
-        </Panel>
+        {renderSystemDiagnostics(diagnostics)}
+        <Table className='custom-table'>
+          <thead className='custom-table-heading'>
+            <tr>
+              <th className='custom-table-heading-cell'>Zone</th>
+              <th className='custom-table-heading-cell'>Priority Votes</th>
+              <th className='custom-table-heading-cell'>Locked/Unlocked</th>
+              <th className='custom-table-heading-cell zone-status'>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+						{Object.keys(zones).map((zoneId, index) => {
+							const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
+							const zoneStatusDiagnosticCode = diagnostics[zoneStatusDiagnosticKey];
+							const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
+							const zoneStatusLocked = zones[zoneId].lockStatus;
+              const zonePriority = zones[zoneId].priorityVote;
+              const zoneCall = zones[zoneId].zoneCall;
+							return(
+								<tr key={index}>
+                  <td className="custom-table-cell">{`${zoneId}`}</td>
+									<td className="custom-table-cell">{getZoneVoteString(zonePriority, zoneCall)}</td>
+									<td onClick={() => toggleZoneLock(zoneId, zoneStatusLocked)}
+                      className="custom-table-cell zone-lock">{zoneStatusLocked}</td>
+									<td className="custom-table-cell zone-status">{`${zoneStatusDisplay}`}</td>
+								</tr>
+							)
+						})}
+          </tbody>
+        </Table>
+        <div className="lock-button-group">
+          <Button onClick={unlockAllZones.bind(this)} block>Unlock All</Button>
+          <Button onClick={lockAllZones.bind(this)} block>Lock All</Button>
+        </div>
+        {renderSaStatDiagnostics(zones)}
       </div>
     );
   }

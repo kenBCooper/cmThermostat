@@ -20,10 +20,15 @@ class AppPanel extends Component {
         maxSidebarHeight: this.refs.appPanel.clientHeight,
       });
     });
+  }
 
-    this.setState({
-      maxSidebarHeight: this.refs.appPanel.clientHeight,
-    });
+  componentDidUpdate() {
+    const currAppPanelHeight = this.refs.appPanel.clientHeight;
+    if (this.state.maxSidebarHeight !== currAppPanelHeight) {
+      this.setState({
+        maxSidebarHeight: this.refs.appPanel.clientHeight,
+      });
+    }
   }
 
   componentWillUnmount() {

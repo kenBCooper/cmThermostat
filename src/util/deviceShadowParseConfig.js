@@ -8,6 +8,7 @@ export const STAT_PARSE_LIST = {
   4: 'occupiedHeat',
   5: 'unoccupiedCool',
   6: 'unoccupiedHeat',
+  7: 'priorityVote',
   8: 'mondayOccupiedHour',
   9: 'mondayOccupiedMinute',
   10: 'mondayOccupiedAmPm',

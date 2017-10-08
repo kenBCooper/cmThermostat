@@ -15,31 +15,37 @@ class ThermostatActionIcon extends Component {
     let imgSource;
     let isActive;
 
-    const zoneData = this.props.zoneData;
-    const currentTemp = zoneData.currentTemp;
-    const heatPoint = zoneData.occupiedStatus === '1' ? zoneData.occupiedHeat : zoneData.unoccupiedHeat;
-    const coolPoint = zoneData.occupiedStatus === '1' ? zoneData.occupiedCool : zoneData.unoccupiedCool;
-    const standaloneThermostat = zoneData.standaloneThermostat === '1';
+    if (!(this.props.showHeat || this.props.showCool)) {
+      const zoneData = this.props.zoneData;
+      const currentTemp = zoneData.currentTemp;
+      const heatPoint = zoneData.occupiedStatus === '1' ? zoneData.occupiedHeat : zoneData.unoccupiedHeat;
+      const coolPoint = zoneData.occupiedStatus === '1' ? zoneData.occupiedCool : zoneData.unoccupiedCool;
+      const standaloneThermostat = zoneData.standaloneThermostat === '1';
 
-    const diagnostics = getDiagnosticForCurrentSystem(this.props.deviceShadow);
-    if (currentTemp < heatPoint) {
-      imgSource = heatIcon;
-      if (standaloneThermostat) {
-        isActive = true;
+      const diagnostics = getDiagnosticForCurrentSystem(this.props.deviceShadow);
+      if (currentTemp < heatPoint) {
+        imgSource = heatIcon;
+        if (standaloneThermostat) {
+          isActive = true;
+        } else {
+          isActive = diagnostics.systemStatus === DIAGNOSTIC_HEAT_STATUS ? true : false;
+        }
+      } else if (currentTemp > coolPoint) {
+        imgSource = coolIcon;
+        if (standaloneThermostat) {
+          isActive = true;
+        } else {
+          isActive = diagnostics.systemStatus === DIAGNOSTIC_COOL_STATUS ? true : false;
+        }
       } else {
-        isActive = diagnostics.systemStatus === DIAGNOSTIC_HEAT_STATUS ? true : false;
-      }
-    } else if (currentTemp > coolPoint) {
-      imgSource = coolIcon;
-      if (standaloneThermostat) {
-        isActive = true;
-      } else {
-        isActive = diagnostics.systemStatus === DIAGNOSTIC_COOL_STATUS ? true : false;
+        return null;
       }
     } else {
-      return null;
+      if (this.props.showHeat) imgSource = heatIcon;
+      if (this.props.showCool) imgSource = coolIcon;
+      isActive = true;
     }
-    const sizeClassName = this.props.small ? 'small' : '';
+    const sizeClassName = this.props.small ? 'small' : (this.props.medium ? 'medium' : '');
     const greyscaleClassName = isActive ? '' : 'greyscale';
     return (
       <img src={imgSource} 

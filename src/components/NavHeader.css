@@ -9,6 +9,7 @@
 }
 
 .nav-header-list-item {
+  font-size: 14px;
   margin-top: 15px;
   margin-left: 35px;
   float: left;
@@ -24,7 +25,7 @@
 }
 
 .selected-arrow {
-  margin: 11px auto;
+  margin: 9px auto;
 
   width: 0; 
   height: 0; 

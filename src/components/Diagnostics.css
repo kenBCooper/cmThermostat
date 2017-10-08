@@ -1,0 +1,91 @@
+.zone-status {
+  text-align: left;
+}
+
+.zone-lock {
+  cursor: pointer;
+}
+
+.system-diagnostic-item {
+  float: left;
+  padding: 5px 20px;
+  width: 25%;
+  position: relative;
+}
+
+@media only screen and (min-width: 1000px) {
+  .system-diagnostic-item {
+    width: 20%;
+  }
+}
+
+.system-diagnostic-item:after {
+  content: "";
+  background: #dadada;
+  position: absolute;
+  bottom: 10%;
+  right: 0;
+  height: 80%;
+  width: 1px;
+}
+
+@media only screen and (max-width: 700px) {
+  .system-diagnostic-item-header {
+    font-size: 13px;
+  }
+}
+
+.system-diagnostic-item-value {
+  font-size: 50px;
+  text-align: center;
+}
+
+@media only screen and (max-width: 830px) {
+  .system-diagnostic-item-value {
+    font-size: 36px;
+  }
+}
+
+.long-text {
+  margin-top: 22px;
+  font-size: 24px;
+}
+
+@media only screen and (max-width: 1000px) {
+  .long-text {
+    margin-top: 19px;
+    font-size: 18px;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  .long-text {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+}
+
+.lock-button-group {
+  text-align: right;
+  margin-right: 20px;
+  margin-top: -5px;
+  margin-bottom: 10px;
+}
+
+.lock-button-group button {
+  /* Use of important to override bootstrap style */
+  margin-top: 0px !important;
+  display: inline;
+  width: 110px;
+
+  color: #55aedc;
+}
+
+.lock-button-group button:first-child {
+  border-radius: 10px 0px 0px 10px;
+}
+
+.lock-button-group button:last-child {
+  border-radius: 0px 10px 10px 0px;
+  margin-left: -1px;
+}

@@ -1,0 +1,18 @@
+.custom-list-header {
+  width: 100%;
+  padding: 7px;
+
+  font-weight: bold;
+  font-size: 16px;
+
+  color: #424B54;
+  background-color: #dadada;
+
+  display: block;
+  text-align: center;
+}
+
+.custom-list {
+  font-size: 16px;
+  color: #424B54;
+}
