@@ -5,15 +5,9 @@ html {
 body {
   margin: 0;
   padding: 0;
+  overflow: hidden;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-
   background-color: #c6eaff
-}
-
-@media screen and (min-width: 645px) {
-  body {
-    overflow-x: hidden;
-  }
 }
 
 .bold {
