@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Nav, NavItem, Well, Panel, Table } from 'react-bootstrap';
+import { Nav, NavItem, Table } from 'react-bootstrap';
 import { Button } from 'react-bootstrap';
 import { updateZone, updateVacationSchedule } from '../actions/AppActions';
 import { LocaleProvider, TimePicker, DatePicker } from 'antd';
@@ -21,7 +21,6 @@ import {
 import { DAY_NAMES } from '../constants/ScheduleConstants';
 
 import 'antd/dist/antd.css';  // or 'antd/dist/antd.less'
-import './Panel.css';
 import './Table.css';
 import './Schedule.css';
 
@@ -128,62 +127,64 @@ class Schedule extends Component {
 				if(zoneChoice === "All" || dayChoice === "All" || dayChoice === "Weekdays") {
 					moments[zoneChoice] = moments[zoneChoice] || {};
 					moments[zoneChoice][dayChoice] = moments[zoneChoice][dayChoice] || {};
-					moments[zoneChoice][dayChoice].startMoment = this.allEqual(moments, 'startMoment', zoneArrays[zoneChoice], dayArrays[dayChoice]);
-					moments[zoneChoice][dayChoice].endMoment = this.allEqual(moments, 'endMoment', zoneArrays[zoneChoice], dayArrays[dayChoice]);
+					moments[zoneChoice][dayChoice].startMoment =
+						this.allEqual(moments, 'startMoment', zoneArrays[zoneChoice], dayArrays[dayChoice]);
+					moments[zoneChoice][dayChoice].endMoment =
+						this.allEqual(moments, 'endMoment', zoneArrays[zoneChoice], dayArrays[dayChoice]);
 				}
 			} )
 		} )
 
 		return (
-			<Well>
-				<Panel>
-					<Table responsive>
-						<thead>
-							<tr>
-								<th key={0} style={{fontSize: '16px'}}>Zone / Day(s)</th>
-								{dayChoices.map( (dayChoice, index) => {
+			<Table>
+				<thead>
+					<tr>
+						<th key={0}>Zone / Day(s)</th>
+						{dayChoices.map( (dayChoice, index) => {
+							return (
+								<th key={index+1}>{dayChoice}</th>
+							)}
+						)}
+					</tr>
+				</thead>
+				<tbody>
+					{zoneChoices.map( (zoneChoice, index) => {
+						return (
+							<tr key={index}>
+								<td key={0}>{zoneChoice}</td>
+								{dayChoices.map( (dayChoice, ind) => {
 									return (
-										<th key={index+1} style={{fontSize: '16px'}}>{dayChoice}</th>
-									)}
+										<td className="timer-picker-table-cell" key={ind+1}>
+											<TimePicker
+												use12Hours
+												format="h:mm a"
+												value={moments[zoneChoice][dayChoice].startMoment}
+												placeholder="Occ."
+												disabledMinutes={this.disabledMinutes}
+												hideDisabledOptions
+												onChange={
+													this.onArrayTimeChange.bind(this, moments, 'Occupied', dayArrays[dayChoice], zoneArrays[zoneChoice])
+												} />
+											<br />
+											<TimePicker
+												use12Hours
+												format="h:mm a"
+												value={moments[zoneChoice][dayChoice].endMoment}
+												placeholder="Unocc."
+												disabledMinutes={this.disabledMinutes}
+												hideDisabledOptions
+												onChange={
+													this.onArrayTimeChange.bind(this, moments, 'Unoccupied', dayArrays[dayChoice], zoneArrays[zoneChoice])
+												} />
+										</td>
+									);
+								}
 								)}
 							</tr>
-						</thead>
-						<tbody>
-							{zoneChoices.map( (zoneChoice, index) => {
-								return (
-									<tr key={index}>
-										<td key={0} style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>{zoneChoice}</td>
-										{dayChoices.map( (dayChoice, ind) => {
-											return (
-												<td key={ind+1} style={{padding: '16px 8px'}}>
-													<TimePicker
-														use12Hours
-														format="h:mm a"
-														value={moments[zoneChoice][dayChoice].startMoment}
-														placeholder="Occ."
-														disabledMinutes={this.disabledMinutes}
-														hideDisabledOptions
-														onChange={this.onArrayTimeChange.bind(this, moments, 'Occupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
-													<br />
-													<TimePicker
-														use12Hours
-														format="h:mm a"
-														value={moments[zoneChoice][dayChoice].endMoment}
-														placeholder="Unocc."
-														disabledMinutes={this.disabledMinutes}
-														hideDisabledOptions
-														onChange={this.onArrayTimeChange.bind(this, moments, 'Unoccupied', dayArrays[dayChoice], zoneArrays[zoneChoice])} />
-												</td>
-											);
-										}
-										)}
-									</tr>
-								)}
-							)}
-						</tbody>
-					</Table>
-				</Panel>
-			</Well>
+						)}
+					)}
+				</tbody>
+			</Table>
 		)
 	}
 
@@ -223,48 +224,47 @@ class Schedule extends Component {
 		} )
 		const numVacs = Object.keys(vacations).length;
 		return (
-			<Well>
-				<Panel>
-					<LocaleProvider locale={locales}>
-						<Table responsive>
-							<thead>
-								<tr style={{fontSize: '16px'}}>
-									<th>#</th>
-									<th>Start Date ~ End Date</th>
-								</tr>
-							</thead>
-							<tbody>
-								{numVacs > 0 ?
-										vacArr.map( (vac, index) => {
-											return (
-												<tr key={index}>
-													<td style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>{index+1}</td>
-													<td style={{padding: '16px 8px'}}>
-														<RangePicker value={[vac.startDate, vac.endDate]}
-															onChange={this.updateVacation.bind(this,vac.key)} />
-														<Button bsStyle="danger" bsSize="small" style={{margin: '0px 20px'}}
-															onClick={this.deleteVacation.bind(this,vac.key)}>Remove</Button>
-													</td>
-												</tr>
-											)
-										}) : null
-								}
-								{numVacs < 20 ? (
-									<tr>
-										<td style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>
-											{numVacs+1}
-										</td>
-										<td style={{padding: '16px 8px'}}>
-											<RangePicker value={null} placeholder={["Start date", "End date"]} onChange={this.newVacation.bind(this,Object.keys(vacations))} />
-										</td>
-									</tr>
-								) : null
-								}
-							</tbody>
-						</Table>
-					</LocaleProvider>
-				</Panel>
-			</Well>
+			<LocaleProvider locale={locales}>
+				<Table responsive>
+					<thead>
+						<tr style={{fontSize: '16px'}}>
+							<th>#</th>
+							<th>Start Date ~ End Date</th>
+						</tr>
+					</thead>
+					<tbody>
+						{numVacs > 0 ?
+								vacArr.map( (vac, index) => {
+									return (
+										<tr key={index}>
+											<td style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>{index+1}</td>
+											<td style={{padding: '16px 8px'}}>
+												<RangePicker value={[vac.startDate, vac.endDate]}
+													onChange={() => this.updateVacation(vac.key)} />
+												<Button bsStyle="danger" bsSize="small" style={{margin: '0px 20px'}}
+													onClick={() => this.deleteVacation(vac.key)}>Remove</Button>
+											</td>
+										</tr>
+									)
+								}) : null
+						}
+						{numVacs < 20 ? (
+							<tr>
+								<td style={{fontWeight: 'bold',fontSize: '16px', padding: '16px 8px'}}>
+									{numVacs+1}
+								</td>
+								<td style={{padding: '16px 8px'}}>
+									<RangePicker
+										value={null}
+										placeholder={["Start date", "End date"]}
+										onChange={() => this.newVacation(Object.keys(vacations))} />
+								</td>
+							</tr>
+						) : null
+						}
+					</tbody>
+				</Table>
+			</LocaleProvider>
 		)
 	}
 
