@@ -1,3 +1,6 @@
+.zone-header {
+	font-weight: bold;
+}
 .time-input {
   width: 75%;
   max-width: 60px;
