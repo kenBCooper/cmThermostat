@@ -3,3 +3,7 @@
   max-width: 60px;
 	margin: 0px 6px;
 }
+
+.time-picker-table-cell {
+  padding: 16px 8px;
+}
