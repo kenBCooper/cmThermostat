@@ -11,7 +11,6 @@ import moment from 'moment';
 // import moment from 'moment';
 
 // import LoadingIndicator from './LoadingIndicator';
-import UnderDevelopmentBanner from './UnderDevelopmentBanner';
 import {
   getZonesForCurrentSystem,
   getSchedulesForCurrentSystem,
@@ -273,7 +272,6 @@ class Schedule extends Component {
 
 		return (
 			<div>
-				<UnderDevelopmentBanner />
 				<Nav bsStyle="tabs" activeKey={this.state.activeKey} onSelect={this.handleSelect}>
 					<NavItem eventKey="1">Weekly Schedule</NavItem>
 					<NavItem eventKey="2">Vacations</NavItem>
