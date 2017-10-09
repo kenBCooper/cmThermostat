@@ -1,3 +1,7 @@
+.diagnostics-container {
+  min-width: 650px;
+}
+
 .zone-status {
   text-align: left;
 }

@@ -169,7 +169,7 @@ const Diagnostics = (props) => {
     }
 
     return (
-      <div>
+      <div className="diagnostics-container">
         {renderSystemDiagnostics(diagnostics)}
         <Table className='custom-table'>
           <thead className='custom-table-heading'>

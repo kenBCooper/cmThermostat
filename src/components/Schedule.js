@@ -1,8 +1,6 @@
 import React, { Component } from 'react';
 import { Nav, NavItem } from 'react-bootstrap';
 
-import UnderDevelopmentBanner from './UnderDevelopmentBanner';
-
 import WeeklySchedule from './WeeklySchedule.js';
 import Vacations from './Vacations.js';
 
@@ -18,7 +16,6 @@ class Schedule extends Component {
 	render = () => {
 		return (
 			<div>
-				<UnderDevelopmentBanner />
 				<Nav bsStyle="tabs" activeKey={this.state.activeKey} onSelect={this.handleSelect}>
 					<NavItem eventKey="1">Weekly Schedule</NavItem>
 					<NavItem eventKey="2">Vacations</NavItem>
