@@ -55,6 +55,8 @@ class WeeklySchedule extends Component {
 
 	validateTime = (moments, occOrUnocc, dayChoice, zoneChoice, newTimeMoment) => {
 		// if setting occupied time, must be earlier than unocc
+		console.log(newTimeMoment);
+		if (newTimeMoment === null) return false;
 		if (occOrUnocc === 'Occupied') {
 			return newTimeMoment.isBefore(moments[zoneChoice][dayChoice].endMoment)
 		} else {
