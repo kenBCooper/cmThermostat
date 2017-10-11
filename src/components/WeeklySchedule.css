@@ -1,6 +1,19 @@
+table.weekly-schedule-table {
+  width: auto;
+}
+
 .zone-header {
 	font-weight: bold;
 }
+
+.schedule-expansion-header-item {
+  cursor: pointer;
+}
+
+.schedule-expansion-arrow {
+  margin-left: 5px;
+}
+
 .time-input {
   width: 75%;
   max-width: 60px;
@@ -10,3 +23,8 @@
 .time-picker-table-cell {
   padding: 16px 8px;
 }
+
+.time-picker-table-cell span {
+    width: 90px;
+}
+

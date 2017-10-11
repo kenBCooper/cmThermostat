@@ -13,7 +13,6 @@ const MIN_TEMP = 50;
 const MAX_TEMP = 100;
 
 class ZoneDetail extends Component {
-  state={}
   render() {
     const zoneData = this.props.zoneData
     if (zoneData && this.props.zoneId) {

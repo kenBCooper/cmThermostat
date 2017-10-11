@@ -58,7 +58,7 @@ class Vacations extends Component {
 		const numVacs = Object.keys(vacations).length;
 		return (
 			<LocaleProvider locale={locales}>
-				<Table responsive>
+				<Table>
 					<thead>
 						<tr className="vacations-header" style={{fontSize: '16px'}}>
 							<th>#</th>

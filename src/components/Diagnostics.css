@@ -33,6 +33,13 @@
   width: 1px;
 }
 
+@media only screen and (max-width: 1000px) {
+  .system-diagnostic-list li:last-child .system-diagnostic-item:after {
+    content: "";
+    width: 0px;
+  }
+}
+
 @media only screen and (max-width: 700px) {
   .system-diagnostic-item-header {
     font-size: 13px;

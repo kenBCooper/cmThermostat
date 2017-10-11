@@ -57,6 +57,7 @@ export const publishDeviceShadowZoneUpdate = (updatedShadow, zoneId, systemId) =
     };
 
 		console.log("Published: ", updatePayload);
+    console.log("LENGTH: " + updatePayload.length);
     mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
   }, UPDATE_DEBOUNCE_TIME);
 
@@ -382,29 +383,31 @@ const parseVacationData = (vacationValues) => {
 // Get specific zone update payload, needed so we only send exactly what
 // has updated. Payload size must be kept to a minimum.
 const getZoneUpdatePayload = (rawShadow, zoneId) => {
-  let zoneUpdatePayload = {};
-  Object.keys(rawShadow).forEach((key) => {
-    if (key.charAt(0) === 'S') {
-      const zoneNumber = key.split('S')[1];
-      if (zoneNumber === zoneId.toString()) {
-        zoneUpdatePayload[key] = rawShadow[key];
-      }
-    }
-  });
+  // let zoneUpdatePayload = {};
+  // Object.keys(rawShadow).forEach((key) => {
+  //   if (key.charAt(0) === 'S') {
+  //     const zoneNumber = key.split('S')[1];
+  //     if (zoneNumber === zoneId.toString()) {
+  //       zoneUpdatePayload[key] = rawShadow[key];
+  //     }
+  //   }
+  // });
 
-  return zoneUpdatePayload;
+  // return zoneUpdatePayload;
+  return rawShadow;
 }
 // Get specific vacation update payload, needed so we only send exactly what
 // has updated. Payload size must be kept to a minimum.
 const getVacUpdatePayload = (rawShadow) => {
-  let updatePayload = {};
-  Object.keys(rawShadow).forEach((key) => {
-    if (key === 'V') {
-        updatePayload[key] = rawShadow[key];
-		}
-	});
+ //  let updatePayload = {};
+ //  Object.keys(rawShadow).forEach((key) => {
+ //    if (key === 'V') {
+ //        updatePayload[key] = rawShadow[key];
+	// 	}
+	// });
 
-  return updatePayload;
+ //  return updatePayload;
+ return rawShadow;
 }
 
 // Given a device shadow object, return the zones that apply to the currently displayed

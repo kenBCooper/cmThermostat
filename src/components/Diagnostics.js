@@ -108,7 +108,7 @@ const Diagnostics = (props) => {
       return (
         <div>
           <span className="custom-list-header">System Diagnostics</span>
-          <ul className="custom-list">
+          <ul className="custom-list system-diagnostic-list">
             <li>{renderSystemDiagnosticTempItem(`${diagnostics.leavingAir}°`, 'Leaving Air')}</li>
             <li>{renderSystemDiagnosticTempItem(`${diagnostics.returnAir}°`, 'Return Air')}</li>
             <li>{renderSystemDiagnosticTempItem(`${diagnostics.outsideAir}°`, 'Outside Air')}</li>
