@@ -12,11 +12,14 @@ import {
 	getMomentsForCurrentSchedules,
 } from '../util/deviceShadowUtil';
 import {
+	ALL_DAYS,
+	WEEK_DAYS,
   DAY_NAMES,
   WEEK_END_DAY_NAMES,
   WEEK_DAY_NAMES,
   GROUP_DAY_NAMES,
   EXPAND_ON,
+  ALL_ZONES,
 } from '../constants/ScheduleConstants';
 
 import 'antd/dist/antd.css';  // or 'antd/dist/antd.less'
@@ -126,7 +129,7 @@ class WeeklySchedule extends Component {
 						use12Hours
 						format="h:mm a"
 						value={moments[zoneChoice][day].startMoment}
-						placeholder="Occ."
+						placeholder="Occ Start"
 						disabledMinutes={this.disabledMinutes}
 						hideDisabledOptions
 						onChange={
@@ -137,7 +140,7 @@ class WeeklySchedule extends Component {
 						use12Hours
 						format="h:mm a"
 						value={moments[zoneChoice][day].endMoment}
-						placeholder="Unocc."
+						placeholder="Occ End"
 						disabledMinutes={this.disabledMinutes}
 						hideDisabledOptions
 						onChange={
@@ -157,9 +160,9 @@ class WeeklySchedule extends Component {
 		let moments = getMomentsForCurrentSchedules(schedules);
 
 		const zoneIds = Object.keys(zones);
-		const zoneChoices = ["All", ...zoneIds];
+		const zoneChoices = [ALL_ZONES, ...zoneIds];
 		let zoneArrays = [];
-		zoneArrays["All"] = [...zoneIds];
+		zoneArrays[ALL_ZONES] = [...zoneIds];
 		zoneIds.forEach( (zone) => {
 			zoneArrays[zone] = [zone];
 		});
@@ -169,16 +172,16 @@ class WeeklySchedule extends Component {
     const dayChoices = [...GROUP_DAY_NAMES, ...weekDays, ...weekEndDays];
 
     let dayArrays = [];
-    dayArrays["All"] = [...weekDays, ...weekEndDays];
-    dayArrays["Weekdays"] = [...weekDays];
-    dayArrays['All'].forEach((day) => {
+    dayArrays[ALL_DAYS] = [...weekDays, ...weekEndDays];
+    dayArrays[WEEK_DAYS] = [...weekDays];
+    dayArrays[ALL_DAYS].forEach((day) => {
       dayArrays[day] = [day];
     });
 
 		// add moments for zone:all, day:all,weekdays
 		Object.keys(dayArrays).forEach( (dayChoice) => {
 			Object.keys(zoneArrays).forEach( (zoneChoice) => {
-				if(zoneChoice === "All" || dayChoice === "All" || dayChoice === "Weekdays") {
+				if(zoneChoice === ALL_ZONES || dayChoice === ALL_DAYS || dayChoice === WEEK_DAYS) {
 					moments[zoneChoice] = moments[zoneChoice] || {};
 					moments[zoneChoice][dayChoice] = moments[zoneChoice][dayChoice] || {};
 					moments[zoneChoice][dayChoice].startMoment =
