@@ -26,6 +26,12 @@ import 'antd/dist/antd.css';  // or 'antd/dist/antd.less'
 import './Table.css';
 import './WeeklySchedule.css';
 
+const DISABLED_MINUTES = Array.from(new Array(60), (x,i) => {
+	if (i % 15 !== 0) return i;
+	return 1;
+});
+
+
 class WeeklySchedule extends Component {
 	constructor(props) {
 		super(props);
@@ -36,16 +42,16 @@ class WeeklySchedule extends Component {
 	}
 
 	// given a start or end time and an array of zones and/or days, update the hardware
-	onArrayTimeChange = (moments, occOrUnocc, dayChoices, zoneChoices, timeMoment, timeString) => {
+	onTimeChange = (moments, occOrUnocc, dayChoices, zoneChoices, timeMoment, timeString) => {
 		zoneChoices.forEach( (zone) => {
 			dayChoices.forEach( (day) => {
-				this.onIndividualTimeChange(moments, occOrUnocc, day, zone, timeMoment, timeString);
-			} )
-		} )
+				this.changeZoneTime(moments, occOrUnocc, day, zone, timeMoment, timeString);
+			});
+		});
 	}
 
 	// given a start or end time, a zone, and a day, update the hardware
-	onIndividualTimeChange = (moments, occOrUnocc, dayChoice, zoneChoice, timeMoment, timeString) => {
+	changeZoneTime = (moments, occOrUnocc, dayChoice, zoneChoice, timeMoment, timeString) => {
 		if (this.validateTime(moments, occOrUnocc, dayChoice, zoneChoice, timeMoment)) {
 			const [hourMinute, amOrPmStr] = timeMoment.format('h:mm A').toString().split(" ");
 			const [hour, minute] = hourMinute.split(":");
@@ -66,6 +72,7 @@ class WeeklySchedule extends Component {
 			return newTimeMoment.isAfter(moments[zoneChoice][dayChoice].startMoment)
 		}
 	}
+
 	// given an array of zones and an array of days, if they all have the same moment, return it; otherwise, return
 	// an empty object
 	allEqual = (moments, startOrEndMoment, zoneArray, dayArray) => {
@@ -86,19 +93,38 @@ class WeeklySchedule extends Component {
 		return allEq ? firstMoment : null;
 	}
 
-	disabledMinutes = () => {
-		// return an array of numbers that excludes 00, 15, 30, 45
-		let disabled = Array.from(new Array(60), (x,i) => {
-			if (i % 15 !== 0) return i;
-			return 1;
-		})
-		return disabled;
+	onSetUnoccupied = (dayChoices, zoneChoices) => {
+		zoneChoices.forEach( (zone) => {
+			dayChoices.forEach( (day) => {
+				this.setZoneUnoccupied(day, zone);
+			});
+		});
+	}
+
+	setZoneUnoccupied = (day, zone) => {
+		this.props.onZoneUpdate("12", `${DAY_NAMES[day]}OccupiedHour`, zone);
+		this.props.onZoneUpdate("01", `${DAY_NAMES[day]}OccupiedMinute`, zone);
+		this.props.onZoneUpdate("1", `${DAY_NAMES[day]}OccupiedAmPm`, zone);
+
+		this.props.onZoneUpdate("12", `${DAY_NAMES[day]}UnoccupiedHour`, zone);
+		this.props.onZoneUpdate("01", `${DAY_NAMES[day]}UnoccupiedMinute`, zone);
+		this.props.onZoneUpdate("1", `${DAY_NAMES[day]}UnoccupiedAmPm`, zone);
 	}
 
 	toggleScheduleExpansion = () => {
 		this.setState({
 			expandedView: !this.state.expandedView
 		});
+	}
+
+	isUnoccAllDay = (startMoment, endMoment) => {
+		return (
+			startMoment && endMoment &&
+			startMoment.hour() === 12 &&
+			startMoment.minute() === 1 &&
+			endMoment.hour() === 12 &&
+			endMoment.minute() === 1
+		);
 	}
 
   renderDayGroupHeaders = (days) => {
@@ -123,32 +149,46 @@ class WeeklySchedule extends Component {
 
   renderTimePickerTableCells = (days, dayArrays, zoneChoice, zoneArrays, moments) => {
 		return days.map((day, idx) => {
+			const startMoment = moments[zoneChoice][day].startMoment;
+  		const endMoment = moments[zoneChoice][day].endMoment;
+  		const isUnoccAllDay = this.isUnoccAllDay(startMoment, endMoment);
+
 			return (
 				<td className="timer-picker-table-cell" key={idx + 1}>
 					<TimePicker
 						use12Hours
 						format="h:mm a"
-						value={moments[zoneChoice][day].startMoment}
-						placeholder="Occ Start"
-						disabledMinutes={this.disabledMinutes}
+						value={isUnoccAllDay ? null : startMoment}
+						placeholder={isUnoccAllDay ? "Unoccupied" : "Occ Start"}
+						disabledMinutes={() => DISABLED_MINUTES}
 						hideDisabledOptions
+						addon={() => this.renderSetUnoccupiedButton(dayArrays[day], zoneArrays[zoneChoice])}
 						onChange={
-							this.onArrayTimeChange.bind(this, moments, 'Occupied', dayArrays[day], zoneArrays[zoneChoice])
+							this.onTimeChange.bind(this, moments, 'Occupied', dayArrays[day], zoneArrays[zoneChoice])
 						} />
 					<br />
 					<TimePicker
 						use12Hours
 						format="h:mm a"
-						value={moments[zoneChoice][day].endMoment}
-						placeholder="Occ End"
-						disabledMinutes={this.disabledMinutes}
+						value={isUnoccAllDay ? null : endMoment}
+						placeholder={isUnoccAllDay ? "Unoccupied" : "Occ End"}
+						disabledMinutes={() => DISABLED_MINUTES}
 						hideDisabledOptions
+						addon={() => this.renderSetUnoccupiedButton(dayArrays[day], zoneArrays[zoneChoice])}
 						onChange={
-							this.onArrayTimeChange.bind(this, moments, 'Unoccupied', dayArrays[day], zoneArrays[zoneChoice])
+							this.onTimeChange.bind(this, moments, 'Unoccupied', dayArrays[day], zoneArrays[zoneChoice])
 						} />
 				</td>
 			);
 		});
+  }
+
+  renderSetUnoccupiedButton = (days, zones) => {
+  	return (
+  		<button className="set-unocc-button" onClick={() => this.onSetUnoccupied(days, zones)}>
+  			Unoccupied All Day
+  		</button>
+  	);
   }
 
 	render = () => {
