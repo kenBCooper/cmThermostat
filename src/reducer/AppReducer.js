@@ -155,7 +155,7 @@ const updateZone = (state, action) => {
     state.rawShadow[currentSystemNumber], updatedDeviceShadowState[currentSystemNumber]);
 
   // Publish an update to the external device shadow using our updated raw state.
-  publishDeviceShadowZoneUpdate(updatedRawShadow, updateZoneId, currentSystemNumber);
+  publishDeviceShadowZoneUpdate(updatedRawShadow, currentSystemNumber, updateZoneId);
 
   // Optimistically update local state with changes while update to device shadow
   // is pending.

@@ -8,8 +8,20 @@ import { DAY_NAMES, AM_PM_VALUES } from '../constants/ScheduleConstants';
 import moment from 'moment';
 
 // 3 sec debounce per unique zone update.
-const UPDATE_DEBOUNCE_TIME = 3000;
+const UPDATE_DEBOUNCE_TIME = 3500;
+
+// Data structure for PENDING_UPDATES
+// PENDING UPDATES = {
+//   systemId: {
+//     <V (vacation) or Z (zones)>: {
+//       timeout: window.timeout,
+//       payload: <updated device shadow object>
+//     }
+//   }
+// }
 const PENDING_UPDATES = {};
+const VACATION_UPDATE = 'V';
+const ZONE_UPDATE = 'Z';
 
 let thingName = undefined;
 let mqttClient;
@@ -42,49 +54,63 @@ const createBaseRequestMessage = (systemNumber) => {
   return `{"state": {"reported":{"R":"${systemNumber},0,"}}}`;
 }
 
-export const publishDeviceShadowZoneUpdate = (updatedShadow, zoneId, systemId) => {
-  // If an update is pending for this specific system/zone, replace it with the latest
+export const publishDeviceShadowZoneUpdate = (updatedShadow, systemId, zoneId) => {
+  // If an update is pending for this specific system, replace it with the latest
   // update.
-  const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId][zoneId];
-  if (pendingUpdate) clearTimeout(pendingUpdate);
+  const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId][ZONE_UPDATE];
+  if (pendingUpdate && pendingUpdate.timeout) clearTimeout(pendingUpdate.timeout);
 
-  const shadowUpdatePayload = getZoneUpdatePayload(updatedShadow, zoneId);
+  let nextUpdatePayload = getZoneUpdatePayload(updatedShadow, zoneId);
+  if (pendingUpdate && pendingUpdate.payload) {
+    nextUpdatePayload = mergeUpdatePayloads(nextUpdatePayload, pendingUpdate.payload);
+  }
+
   const nextUpdate = setTimeout(() => {
     const updatePayload = {
       state: {
-          reported: shadowUpdatePayload
+          reported: nextUpdatePayload
       }
     };
 
-		console.log("Published: ", updatePayload);
-    console.log("LENGTH: " + updatePayload.length);
+    // For debugging:
+		// console.log("Published: ", updatePayload);
     mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
+    PENDING_UPDATES[systemId][ZONE_UPDATE] = {};
   }, UPDATE_DEBOUNCE_TIME);
 
-  if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = {};
-  PENDING_UPDATES[systemId][zoneId] = nextUpdate;
+  if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = { Z: {} };
+  PENDING_UPDATES[systemId][ZONE_UPDATE].timeout = nextUpdate;
+  PENDING_UPDATES[systemId][ZONE_UPDATE].payload = nextUpdatePayload;
 }
 
 export const publishDeviceShadowVacationUpdate = (updatedShadow, systemId) => {
   // If an update is pending for this specific system, replace it with the latest
   // update.
-  const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId]['V'];
-  if (pendingUpdate) clearTimeout(pendingUpdate);
+  const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId][VACATION_UPDATE];
+  if (pendingUpdate && pendingUpdate.timeout) clearTimeout(pendingUpdate.timeout);
 
-  const shadowUpdatePayload = getVacUpdatePayload(updatedShadow);
+  const nextUpdatePayload = getVacUpdatePayload(updatedShadow);
+
   const nextUpdate = setTimeout(() => {
     const updatePayload = {
       state: {
-          reported: shadowUpdatePayload
+          reported: nextUpdatePayload
       }
     };
 
+    // For debugging:
 		console.log("Published: ", updatePayload);
     mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
+    PENDING_UPDATES[systemId][VACATION_UPDATE] = {};
   }, UPDATE_DEBOUNCE_TIME);
 
-	if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = {};
-	PENDING_UPDATES[systemId]['V'] = nextUpdate;
+	if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = { V: {} };
+	PENDING_UPDATES[systemId][VACATION_UPDATE].timeout = nextUpdate;
+  PENDING_UPDATES[systemId][VACATION_UPDATE].payload = nextUpdatePayload;
+}
+
+const mergeUpdatePayloads = (newPayload, pendingPayload) => {
+  return Object.assign({}, pendingPayload, newPayload);
 }
 
 // Update raw shadow with new values in the updateShadowObject.
@@ -383,31 +409,29 @@ const parseVacationData = (vacationValues) => {
 // Get specific zone update payload, needed so we only send exactly what
 // has updated. Payload size must be kept to a minimum.
 const getZoneUpdatePayload = (rawShadow, zoneId) => {
-  // let zoneUpdatePayload = {};
-  // Object.keys(rawShadow).forEach((key) => {
-  //   if (key.charAt(0) === 'S') {
-  //     const zoneNumber = key.split('S')[1];
-  //     if (zoneNumber === zoneId.toString()) {
-  //       zoneUpdatePayload[key] = rawShadow[key];
-  //     }
-  //   }
-  // });
+  let zoneUpdatePayload = {};
+  Object.keys(rawShadow).forEach((key) => {
+    if (key.charAt(0) === 'S') {
+      const zoneNumber = key.split('S')[1];
+      if (zoneNumber === zoneId.toString()) {
+        zoneUpdatePayload[key] = rawShadow[key];
+      }
+    }
+  });
 
-  // return zoneUpdatePayload;
-  return rawShadow;
+  return zoneUpdatePayload;
 }
 // Get specific vacation update payload, needed so we only send exactly what
 // has updated. Payload size must be kept to a minimum.
 const getVacUpdatePayload = (rawShadow) => {
- //  let updatePayload = {};
- //  Object.keys(rawShadow).forEach((key) => {
- //    if (key === 'V') {
- //        updatePayload[key] = rawShadow[key];
-	// 	}
-	// });
+  let updatePayload = {};
+  Object.keys(rawShadow).forEach((key) => {
+    if (key === 'V') {
+        updatePayload[key] = rawShadow[key];
+		}
+	});
 
- //  return updatePayload;
- return rawShadow;
+  return updatePayload;
 }
 
 // Given a device shadow object, return the zones that apply to the currently displayed
