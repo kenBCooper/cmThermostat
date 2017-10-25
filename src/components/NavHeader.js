@@ -19,9 +19,9 @@ const NavHeader = (props) => {
   const diagnosticsPath = `/${getCurrentSystemNumber()}/d`
   const schedulePath = `/${getCurrentSystemNumber()}/s`
 
-  const conditionallyApplySelectedClass = (baseClass, path) => {
+  const applyClassIfCurrentSelection = (applyClass, baseClass, path) => {
     if (isCurrentPath(path)) {
-      return baseClass + ' selected';
+      return baseClass + applyClass;
     } else {
       return baseClass
     }
@@ -31,18 +31,28 @@ const NavHeader = (props) => {
     return isCurrentPath(path) ? (<div className="selected-arrow"></div>) : '';
   }
 
+  const getSystemName = () => {
+    const currentSystemNumber = getCurrentSystemNumber()
+    if (currentSystemNumber === 0) {
+      return 'GenX';
+    } else {
+      return `RM${currentSystemNumber}`;
+    }
+  }
+
   return (
     <div className="nav-header">
       <ul className="nav-header-list">
-        <li className={conditionallyApplySelectedClass("nav-header-list-item", zonesPath)}>
+        <li className="nav-header-list-item nav-header-system-name"><i>{getSystemName()}:</i></li>
+        <li className={applyClassIfCurrentSelection(" selected", "nav-header-list-item", zonesPath)}>
           <i><a href={zonesPath} onClick={handleNavigation}>Zones</a></i>
           {renderSelectionArrow(zonesPath)}
         </li>
-        <li className={conditionallyApplySelectedClass("nav-header-list-item", diagnosticsPath)}>
+        <li className={applyClassIfCurrentSelection(" selected", "nav-header-list-item", diagnosticsPath)}>
           <i><a href={diagnosticsPath} onClick={handleNavigation}>Diagnostics</a></i>
           {renderSelectionArrow(diagnosticsPath)}
         </li>
-        <li className={conditionallyApplySelectedClass("nav-header-list-item", schedulePath)}>
+        <li className={applyClassIfCurrentSelection(" selected", "nav-header-list-item", schedulePath)}>
           <i><a href={schedulePath} onClick={handleNavigation}>Schedule</a></i>
           {renderSelectionArrow(schedulePath)}
         </li>

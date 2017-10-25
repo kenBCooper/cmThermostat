@@ -27,14 +27,14 @@ class Login extends Component {
     super(props);
 
     // For testing
-    this.state = {
-      username: 'kev.r.cox90+test1@gmail.com',
-      password: 'Kevin1..',
-    };
     // this.state = {
-    //   username: '',
-    //   password: '',
+    //   username: 'kev.r.cox90+test1@gmail.com',
+    //   password: 'Kevin1..',
     // };
+    this.state = {
+      username: '',
+      password: '',
+    };
   }
 
   login(username, password) {

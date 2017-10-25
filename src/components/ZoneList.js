@@ -12,7 +12,7 @@ import './Table.css';
 const ZONE_LIST_HEADERS = {
     ZONE: 'Zone',
     TEMP: 'Temp',
-    CURR_ACTION: 'Action',
+    CURR_ACTION: 'Operation',
     OCC_HEAT_COOL_SETPOINTS: 'Occupied Heat / Cool',
     UNOCC_HEAT_COOL_SETPOINTS: 'Unoccupied Heat / Cool',
     SA_STAT: 'SA Stat',

@@ -31,6 +31,13 @@ const ZONE_STATUS_DISPLAY_STRINGS = {
   3: 'STAT LOW BAT',
 }
 
+const SA_ZONE_STATUS_DISPLAY_STRINGS = {
+  0: 'STAT OK',
+  1: 'NO DAMPER',
+  2: 'STAT RF ERROR / DEAD BAT',
+  3: 'STAT LOW BAT',
+}
+
 const STANDALONE_VALUE = '2';
 const LONG_TEXT_CUTOFF = 4;
 
@@ -168,6 +175,14 @@ const Diagnostics = (props) => {
       );
     }
 
+    const getZoneStatusDisplay = (zone, diagnosticCode) => {
+      if (zone.standaloneThermostat === STANDALONE_VALUE) {
+        return SA_ZONE_STATUS_DISPLAY_STRINGS[diagnosticCode];
+      } else {
+        return ZONE_STATUS_DISPLAY_STRINGS[diagnosticCode];
+      }
+    }
+
     return (
       <div className="diagnostics-container">
         {renderSystemDiagnostics(diagnostics)}
@@ -184,7 +199,7 @@ const Diagnostics = (props) => {
 						{Object.keys(zones).map((zoneId, index) => {
 							const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
 							const zoneStatusDiagnosticCode = diagnostics[zoneStatusDiagnosticKey];
-							const zoneStatusDisplay = ZONE_STATUS_DISPLAY_STRINGS[zoneStatusDiagnosticCode];
+							const zoneStatusDisplay = getZoneStatusDisplay(zones[zoneId], zoneStatusDiagnosticCode);
 							const zoneStatusLocked = zones[zoneId].lockStatus;
               const zonePriority = zones[zoneId].priorityVote;
               const zoneCall = zones[zoneId].zoneCall;

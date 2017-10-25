@@ -209,7 +209,6 @@ class WeeklySchedule extends Component {
 
     const weekDays = Object.keys(WEEK_DAY_NAMES);
     const weekEndDays = Object.keys(WEEK_END_DAY_NAMES);
-    const dayChoices = [...GROUP_DAY_NAMES, ...weekDays, ...weekEndDays];
 
     let dayArrays = [];
     dayArrays[ALL_DAYS] = [...weekDays, ...weekEndDays];
