@@ -42,3 +42,9 @@ export const receiveUserInfo = (userAttrs) => {
     }
   }
 }
+
+export const resetShadow = () => {
+  return {
+    type: Actions.RESET_SHADOW,
+  }
+}

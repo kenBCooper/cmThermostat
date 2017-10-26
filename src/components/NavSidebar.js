@@ -5,6 +5,8 @@ import { connect } from 'react-redux';
 
 import './NavSidebar.css';
 import logo from '../img/Zonex_Logo.png';
+import { retryShadowConnection } from '../util/deviceShadowUtil';
+import { resetShadow } from '../actions/AppActions';
 
 // We restrict the max height of the system list based on the max height of the app
 // panel - the extra non system list space we want to reserve.
@@ -26,13 +28,10 @@ class NavSideBar extends Component {
           alt="Zonex Systems Logo"/>
         <ul className="nav-list">
           <li onClick={this.toggleSystemMenu} className="nav-list-item nav-text">
-            <div className="nav-icon-left">
-              <Glyphicon glyph="list"/>
-            </div>
+            <Glyphicon className="nav-icon-left" glyph="list"/>
             System
-            <div className="nav-icon-right">
-              <Glyphicon glyph={this.state.showSystemList ? "chevron-up" : "chevron-down"}/>
-            </div>
+            <Glyphicon className="nav-icon-right"
+                       glyph={this.state.showSystemList ? "chevron-up" : "chevron-down"}/>
           </li>
           <Collapse in={this.state.showSystemList}
                     onExit={this.disableScrollbarForCollapse}
@@ -51,6 +50,11 @@ class NavSideBar extends Component {
             </ul>
           </Collapse>
         </ul>
+        <div className="nav-footer">
+          <div className="nav-text" onClick={this.onRefresh}>
+            <Glyphicon className="nav-icon-left" glyph="refresh"/>Refresh
+          </div>
+        </div>
       </div>
     );
   }
@@ -95,6 +99,11 @@ class NavSideBar extends Component {
     event.preventDefault();
     this.props.history.push(event.target.pathname)
   }
+
+  onRefresh = () => {
+    retryShadowConnection();
+    this.props.onRefresh();
+  }
 }
 
 const mapStateToProps = (state) => {
@@ -103,5 +112,11 @@ const mapStateToProps = (state) => {
   }
 }
 
-export default withRouter(connect(mapStateToProps, undefined)(NavSideBar));
+const mapDispatchToProps = (dispatch) => {
+  return {
+    onRefresh: () => dispatch(resetShadow()),
+  }
+}
+
+export default withRouter(connect(mapStateToProps, mapDispatchToProps)(NavSideBar));
 

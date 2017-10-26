@@ -43,6 +43,8 @@ const appReducer = (state = DEFAULT_STATE, action) => {
       return updateZone(state, action);
     case Actions.UPDATE_VACATION_SCHEDULE:
       return updateVacation(state, action);
+    case Actions.RESET_SHADOW:
+      return resetDeviceShadow(state, action);
     default:
       return state;
   }
@@ -209,6 +211,15 @@ const updateVacation = (state, action) => {
     },
     shadow: updatedDeviceShadowState,
   }
+}
+
+const resetDeviceShadow = (state, action) => {
+  let resetShadow = { ...DEFAULT_STATE };
+
+  resetShadow.user = { ...state.user };
+  resetShadow.connected = state.connected;
+
+  return resetShadow;
 }
 
 export default appReducer

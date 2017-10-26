@@ -25,6 +25,9 @@ const ZONE_UPDATE = 'Z';
 
 let thingName = undefined;
 let mqttClient;
+let onShadowUpdate;
+let onConnectionSuccess;
+let congnitoCredentials;
 
 const setThingName = (macAddress) => {
   // All 4 digit mac addresses will have a 9 hard-coded before their 
@@ -46,12 +49,14 @@ const updateTopicName = () => {
   return `$aws/things/${thingName}/shadow/update`;
 }
 
-const getTopicName = () => {
-  return `$aws/things/${thingName}/shadow/get`;
-}
-
 const createBaseRequestMessage = (systemNumber) => {
-  return `{"state": {"reported":{"R":"${systemNumber},0,"}}}`;
+  return JSON.stringify({
+    state: {
+      reported: {
+        R: "0,0,"
+      }
+    }
+  });
 }
 
 export const publishDeviceShadowZoneUpdate = (updatedShadow, systemId, zoneId) => {
@@ -99,7 +104,7 @@ export const publishDeviceShadowVacationUpdate = (updatedShadow, systemId) => {
     };
 
     // For debugging:
-		console.log("Published: ", updatePayload);
+		// console.log("Published: ", updatePayload);
     mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
     PENDING_UPDATES[systemId][VACATION_UPDATE] = {};
   }, UPDATE_DEBOUNCE_TIME);
@@ -215,18 +220,25 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
 
 export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
   if (!macAddress) throw new Error('no mac address provided for device connection');
-  setThingName(macAddress);
+  if (!thingName) setThingName(macAddress);
+
+  // Save a reference to the onUpdate and onSuccess callbacks for future use when restarting
+  // the connection.
+  onShadowUpdate = onUpdate;
+  onConnectionSuccess = onSuccess;
 
   let initialConnection = false;
-
   configureCognitoId((credentials) => {
-    mqttClient = new AWSMqtt({
-      accessKeyId: credentials.AccessKeyId,
-      secretAccessKey: credentials.SecretKey,
-      sessionToken: credentials.SessionToken,
-      endpointAddress: awsConfig.endpoint,
-      region: awsConfig.region,
-    });
+    if (!congnitoCredentials) congnitoCredentials = credentials;
+    if (!mqttClient) {
+      mqttClient = new AWSMqtt({
+        accessKeyId: credentials.AccessKeyId,
+        secretAccessKey: credentials.SecretKey,
+        sessionToken: credentials.SessionToken,
+        endpointAddress: awsConfig.endpoint,
+        region: awsConfig.region,
+      });
+    }
 
     mqttClient.on('connect', () => {
       console.log('connected to iot mqtt websocket');
@@ -238,48 +250,51 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
       }
 
       mqttClient.publish(updateTopicName(), createBaseRequestMessage(0));
-      mqttClient.publish(getTopicName());
 
-      // // DUMMY FOR WHEN BOARD IS DOWN
-      // onUpdate(JSON.parse(`{
-      //   "R": "0,0,",
-      //   "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
-      //   "D": "0,78,32,32,3,0,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-      //   "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
-      //   "DIS": "3,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
-      //   "P": "0,1,2,3,4,",
-      //   "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-      //   "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-      //   "S3": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-      //   "S4": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-      //   "S5": "0,1,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,2,70,75,25,0,",
-      //   "S6": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-      //   "S7": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-      // }`));
+     // // DUMMY FOR WHEN BOARD IS DOWN
+     // onUpdate(JSON.parse(`{
+     //   "R": "0,0,",
+     //   "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
+     //   "D": "0,78,32,32,3,0,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+     //   "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
+     //   "DIS": "3,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
+     //   "P": "0,1,2,3,4,",
+     //   "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
+     //   "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+     //   "S3": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+     //   "S4": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+     //   "S5": "0,1,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,2,70,75,25,0,",
+     //   "S6": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+     //   "S7": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
+     // }`));
 
-      // onUpdate(JSON.parse(`{
-      //   "D": "1,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-      //   "S1": "1,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-      //   "S2": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-      //   "S3": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-      // }`));
+     // onUpdate(JSON.parse(`{
+     //   "D": "1,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+     //   "S1": "1,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
+     //   "S2": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+     //   "S3": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
+     // }`));
 
-      // onUpdate(JSON.parse(`{
-      //   "D": "2,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-      //   "S1": "2,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-      //   "S2": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-      //   "S3": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-      // }`));
+     // onUpdate(JSON.parse(`{
+     //   "D": "2,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+     //   "S1": "2,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
+     //   "S2": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+     //   "S3": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
+     // }`));
 
-      // onUpdate(JSON.parse(`{
-      //   "D": "3,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-      //   "S1": "3,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-      //   "S2": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-      //   "S3": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-      // }`));
+     // onUpdate(JSON.parse(`{
+     //   "D": "3,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
+     //   "S1": "3,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
+     //   "S2": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
+     //   "S3": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
+     // }`));
     });
 
     mqttClient.on('message', (topic, message) => {
+      // For debugging
+      // console.log(`********* message received **********\n${topic}`);
+      // console.log(JSON.parse(message).state.reported);
+
       if (topic === updateRejectedTopicName()) {
         console.log('update rejected!');
         console.log(`${message.toString()}`);
@@ -306,6 +321,25 @@ export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
 
     onSuccess(mqttClient);
   });
+}
+
+export const retryShadowConnection = () => {
+  if(!mqttClient) return;
+
+  // Wait 3 seconds - this is the time it takes for the device shadow to clear its state. Then
+  // follow up with 2 base request messages. For some reason the base request message only seems
+  // to work if it is received by an empty device shadow, and 2 messages seems to be more reliable
+  // than one. Not sure why...
+  window.setTimeout(
+    () => mqttClient.publish(updateTopicName(), createBaseRequestMessage(0)), 3000);
+  window.setTimeout(
+    () => mqttClient.publish(updateTopicName(), createBaseRequestMessage(0)), 4000);
+
+  // Do we need to completely re-establish connection? or does this do the trick?
+  // mqttClient.end(false, () => {
+  //   mqttClient = null;
+  //   connectToDeviceShadow(thingName, onShadowUpdate, onConnectionSuccess);
+  // });
 }
 
 const configureCognitoId = (onSuccess) => {

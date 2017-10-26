@@ -58,12 +58,17 @@
   color: white;
 }
 
-div.nav-icon-right {
+.nav-icon-right {
   padding-left: 7px;
   display: inline;
 }
 
-div.nav-icon-left {
+.nav-icon-left {
   padding-right: 9px;
   display: inline;
+}
+
+.nav-footer {
+  position: absolute;
+  bottom: 35px;
 }

@@ -20,6 +20,12 @@
   border: none !important;
 }
 
+@media only screen and (max-width: 870px) {
+  .custom-table-heading-cell {
+    font-size: 14px;
+  }
+}
+
 .custom-table-row:hover {
   cursor: pointer;
 }
