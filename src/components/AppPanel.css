@@ -8,7 +8,10 @@
   margin: 20px 20px;
 
   border-radius: 10px;
+  display: -ms-grid;
   display: grid;
+  -ms-grid-columns: 150px calc(100vw - 40px - 150px);
+  -ms-grid-rows: 55px calc(100vh - 40px - 55px);
   grid-template-columns: 150px auto;
   grid-template-rows: 55px auto;
 
@@ -17,15 +20,21 @@
 }
 
 .app-panel-header {
+  -ms-grid-column: 2;
+  -ms-grid-column-span: 1;
   grid-column-start: 2;
   grid-column-end: 3;
+  -ms-grid-row: 1;
   grid-row-start: 1;
 }
 
 .app-panel-sidebar {
   height: calc(100vh - 40px);
 
+  -ms-grid-column: 1;
   grid-column-start: 1;
+  -ms-grid-row: 1;
+  -ms-grid-row-span: 2;
   grid-row-start: 1;
   grid-row-end: 3;
 
@@ -35,6 +44,8 @@
 .app-panel-workspace {
   overflow: auto;
 
+  -ms-grid-column: 2;
   grid-column-start: 2;
+  -ms-grid-row: 2;
   grid-row-start: 2;
 }

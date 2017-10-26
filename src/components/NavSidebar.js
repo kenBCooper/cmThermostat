@@ -103,6 +103,7 @@ class NavSideBar extends Component {
   onRefresh = () => {
     retryShadowConnection();
     this.props.onRefresh();
+    this.props.history.push('/0')
   }
 }
 

@@ -53,7 +53,7 @@ const createBaseRequestMessage = (systemNumber) => {
   return JSON.stringify({
     state: {
       reported: {
-        R: "0,0,"
+        R: `${systemNumber},0,`
       }
     }
   });

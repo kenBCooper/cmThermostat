@@ -27,7 +27,7 @@ import './Table.css';
 import './WeeklySchedule.css';
 
 const DISABLED_MINUTES = Array.from(new Array(60), (x,i) => {
-	if (i % 15 !== 0) return i;
+	if (i % 5 !== 0) return i;
 	return 1;
 });
 
