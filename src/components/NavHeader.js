@@ -34,7 +34,7 @@ const NavHeader = (props) => {
   const getSystemName = () => {
     const currentSystemNumber = getCurrentSystemNumber()
     if (currentSystemNumber === 0) {
-      return 'GenX';
+      return 'GEN X';
     } else {
       return `RM${currentSystemNumber}`;
     }

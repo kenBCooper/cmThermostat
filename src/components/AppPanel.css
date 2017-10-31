@@ -43,6 +43,7 @@
 
 .app-panel-workspace {
   overflow: auto;
+  width: calc(100vw - 40px - 150px);
 
   -ms-grid-column: 2;
   grid-column-start: 2;

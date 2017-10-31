@@ -43,7 +43,7 @@ class NavSideBar extends Component {
             }>
               <li className="system-list-item nav-text">
                 <a onClick={this.handleNavigation} href="/0">
-                  GenX
+                  GEN X
                 </a>
               </li>
               {this.renderGenxDropdownMenuItems()}
