@@ -30,11 +30,14 @@ let onConnectionSuccess;
 let congnitoCredentials;
 
 const setThingName = (macAddress) => {
-  // All 4 digit mac addresses will have a 9 hard-coded before their 
+  // All 4 digit mac addresses will have a 9 hard-coded before
   if (macAddress.length === 4) {
-    macAddress = `9${macAddress}`;
+    thingName = `5410ec49${macAddress}`;
+  } else if (macAddress.length === 5){
+    thingName = `5410ec4${macAddress}`;
+  } else {
+    thingName = macAddress;
   }
-  thingName = `5410ec4${macAddress}`;
 }
 
 const updateAcceptedTopicName = () => {

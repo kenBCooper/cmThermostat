@@ -11,12 +11,16 @@
 }
 
 .login-panel {
+  position: absolute;
+  left: calc(50% - 225px);
+
 	width: 450px;
 	margin: 50px auto;
 }
 
 @media only screen and (max-width: 475px) {
     .login-panel {
+        left: 5%;
         width: 90%;
     }
 }
