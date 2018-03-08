@@ -26,8 +26,7 @@ class ZoneDetail extends Component {
             <div className='occupied-status-display'>
               <i>Current Status:
                 <div className='occupied-highlight'>
-									{zoneData.vacationEnabled === '1' ? ' Vacation' : 
-											(zoneData.occupiedStatus === '1' ? ' Occupied' : ' Unoccupied')}
+									{zoneData.occupiedStatus === '1' ? ' Occupied' : ' Unoccupied'}
                 </div>
               </i>
             </div>

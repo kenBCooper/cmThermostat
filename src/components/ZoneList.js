@@ -42,14 +42,12 @@ class ZoneList extends Component {
             zonesData[zoneNumber].occupiedHeat,
             zonesData[zoneNumber].occupiedCool,
 						zonesData[zoneNumber].occupiedStatus,
-						zonesData[zoneNumber].vacationEnabled,
           ),
         [ZONE_LIST_HEADERS.UNOCC_HEAT_COOL_SETPOINTS]:
           this.formatUnoccupiedSetpoints(
             zonesData[zoneNumber].unoccupiedHeat,
             zonesData[zoneNumber].unoccupiedCool,
             zonesData[zoneNumber].occupiedStatus,
-						zonesData[zoneNumber].vacationEnabled,
           ),
         [ZONE_LIST_HEADERS.SA_STAT]:
           zonesData[zoneNumber].standaloneThermostat === '2' ? 'Y' : 'N',
@@ -63,17 +61,17 @@ class ZoneList extends Component {
     return <ThermostatActionIcon small zoneData={zoneData}/>;
   }
 
-  formatOccupiedSetpoints(heatPoint, coolPoint, isOccupied, onVacation) {
+  formatOccupiedSetpoints(heatPoint, coolPoint, isOccupied) {
     return (
-      <div className={(isOccupied === '1' && onVacation === '0') ? 'bold' : ''}>
+      <div className={(isOccupied === '1') ? 'bold' : ''}>
         {heatPoint} / {coolPoint}
       </div>
     );
   }
 
-  formatUnoccupiedSetpoints(heatPoint, coolPoint, isOccupied, onVacation) {
+  formatUnoccupiedSetpoints(heatPoint, coolPoint, isOccupied) {
     return (
-      <div className={(isOccupied === '0' || onVacation === '1') ? 'bold' : ''}>
+      <div className={(isOccupied === '0') ? 'bold' : ''}>
         {heatPoint} / {coolPoint}
       </div>
     );

@@ -10,6 +10,7 @@ import {
   getDiagnosticForCurrentSystem,
   getZonesForCurrentSystem
 } from '../util/deviceShadowUtil';
+import { getCurrentSystemNumber } from '../util/urlUtil';
 
 import './Table.css';
 import './List.css';
@@ -112,13 +113,16 @@ const Diagnostics = (props) => {
     }
 
     const renderSystemDiagnostics = (diagnostics) => {
+      const isGenX = getCurrentSystemNumber() === '0';
       return (
         <div>
           <span className="custom-list-header">System Diagnostics</span>
           <ul className="custom-list system-diagnostic-list">
             <li>{renderSystemDiagnosticTempItem(`${diagnostics.leavingAir}°`, 'Leaving Air')}</li>
             <li>{renderSystemDiagnosticTempItem(`${diagnostics.returnAir}°`, 'Return Air')}</li>
-            <li>{renderSystemDiagnosticTempItem(`${diagnostics.outsideAir}°`, 'Outside Air')}</li>
+            {(!isGenX && diagnostics.outsideAir === '0') ? null : (
+              <li>{renderSystemDiagnosticTempItem(`${diagnostics.outsideAir}°`, 'Outside Air')}</li>
+            )}
             <li>{
               renderSystemDiagnosticStatusItem(
                 getStatusDisplay(diagnostics.systemStatus),
