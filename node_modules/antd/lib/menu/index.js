@@ -135,7 +135,8 @@ var Menu = function (_React$Component) {
         key: 'getRealMenuMode',
         value: function getRealMenuMode() {
             var inlineCollapsed = this.getInlineCollapsed();
-            if (this.switchModeFromInline && inlineCollapsed) {
+            if (this.switchModeFromInline && inlineCollapsed && this.leaveAnimationExecutedWhenInlineCollapsed) {
+                this.leaveAnimationExecutedWhenInlineCollapsed = false;
                 return 'inline';
             }
             var mode = this.props.mode;
@@ -182,6 +183,8 @@ var Menu = function (_React$Component) {
                                 return _openAnimation2['default'].leave(node, function () {
                                     // Make sure inline menu leave animation finished before mode is switched
                                     _this2.switchModeFromInline = false;
+                                    // Fix https://github.com/ant-design/ant-design/issues/8475
+                                    _this2.leaveAnimationExecutedWhenInlineCollapsed = true;
                                     _this2.setState({});
                                     done();
                                 });

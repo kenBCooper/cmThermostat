@@ -56,10 +56,10 @@ var SlickCarousel = require('react-slick')['default'];
 var Carousel = function (_React$Component) {
     (0, _inherits3['default'])(Carousel, _React$Component);
 
-    function Carousel() {
+    function Carousel(props) {
         (0, _classCallCheck3['default'])(this, Carousel);
 
-        var _this = (0, _possibleConstructorReturn3['default'])(this, (Carousel.__proto__ || Object.getPrototypeOf(Carousel)).call(this));
+        var _this = (0, _possibleConstructorReturn3['default'])(this, (Carousel.__proto__ || Object.getPrototypeOf(Carousel)).call(this, props));
 
         _this.onWindowResized = function () {
             // Fix https://github.com/ant-design/ant-design/issues/2550

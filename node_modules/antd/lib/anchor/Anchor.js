@@ -81,13 +81,18 @@ function easeInOutCubic(t, b, c, d) {
     return cc / 2 * ((t -= 2) * t * t + 2) + b;
 }
 var reqAnimFrame = (0, _getRequestAnimationFrame2['default'])();
+var sharpMatcherRegx = /#([^#]+)$/;
 function scrollTo(href) {
     var offsetTop = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
     var target = arguments[2];
     var callback = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : function () {};
 
     var scrollTop = (0, _getScroll2['default'])(target(), true);
-    var targetElement = document.getElementById(href.substring(1));
+    var sharpLinkMatch = sharpMatcherRegx.exec(href);
+    if (!sharpLinkMatch) {
+        return;
+    }
+    var targetElement = document.getElementById(sharpLinkMatch[1]);
     if (!targetElement) {
         return;
     }
@@ -212,7 +217,11 @@ var Anchor = function (_React$Component) {
             }
             var linkSections = [];
             this.links.forEach(function (link) {
-                var target = document.getElementById(link.substring(1));
+                var sharpLinkMatch = sharpMatcherRegx.exec(link.toString());
+                if (!sharpLinkMatch) {
+                    return;
+                }
+                var target = document.getElementById(sharpLinkMatch[1]);
                 if (target && getOffsetTop(target) < offsetTop + bounds) {
                     var top = getOffsetTop(target);
                     linkSections.push({

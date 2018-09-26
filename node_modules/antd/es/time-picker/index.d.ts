@@ -26,6 +26,10 @@ export interface TimePickerProps {
     getPopupContainer?: (triggerNode: Element) => HTMLElement;
     addon?: Function;
     use12Hours?: boolean;
+    allowEmpty?: boolean;
+    clearText?: string;
+    defaultOpenValue?: moment.Moment;
+    popupClassName?: string;
 }
 declare const _default: React.ComponentClass<TimePickerProps>;
 export default _default;

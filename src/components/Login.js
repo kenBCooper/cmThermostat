@@ -18,26 +18,19 @@ import { connectToDeviceShadow } from '../util/deviceShadowUtil';
 import './Login.css';
 import './Panel.css';
 
-//TODO figure out where what credentials we are using - we should use the ones saed in aws-configuration.js
-
 const LOGIN_SUCCESS_REDIRECT = '/0';
 
 class Login extends Component {
   constructor(props) {
     super(props);
 
-    // For testing
-    // this.state = {
-    //   username: 'kev.r.cox90+test1@gmail.com',
-    //   password: 'Kevin1..',
-    // };
     this.state = {
       username: '',
       password: '',
     };
   }
 
-  login(username, password) {
+  login = (username, password) => {
     const userPool = new CognitoUserPool({
       UserPoolId: 'us-west-2_BcvxalBCi',
       ClientId: '4e89ncs6eab4e9s75fqb0ep9uj',
@@ -53,14 +46,44 @@ class Login extends Component {
     });
 
     const authenticationDetails = new AuthenticationDetails(authenticationData);
+    const afterLogin = this.afterLogin;
 
-    return new Promise((resolve, reject) => (
-      user.authenticateUser(authenticationDetails, {
-        onSuccess: (result) => resolve(result),
-        onFailure: (err) => {reject(err)},
-      })
-    ));
+    user.authenticateUser(authenticationDetails, {
+      onSuccess: afterLogin,
+      onFailure: err => console.log(err),
+    });
   }
+
+  afterLogin = (result) => {
+    const accessToken = result.getAccessToken().getJwtToken();
+    const idToken = result.getIdToken().getJwtToken();
+    const refreshToken = result.getRefreshToken().getToken();
+
+    const user = this.state.user;
+    user.getUserAttributes((err, result) => {
+      const userMacAddressAttr = 
+        result.find(function(attribute){return attribute.Name === awsCognitoConfig.macAttrName});
+      if (!userMacAddressAttr) {
+        const error = 
+          new Error('No mac address found this user. Please contact your administrator to set up this account.');
+        throw error;
+      }
+      this.props.onLogin({
+        accessToken,
+        idToken,
+        refreshToken,
+        mac: userMacAddressAttr.Value,
+      });
+
+      connectToDeviceShadow(
+          userMacAddressAttr.Value,
+          this.props.onDeviceUpdate,
+          this.props.onSuccessfulDeviceConnection
+      );
+
+      this.props.history.push(LOGIN_SUCCESS_REDIRECT);
+    });
+  };
 
   validateForm() {
     return this.state.username.length > 0
@@ -73,50 +96,17 @@ class Login extends Component {
     });
   }
 
-  handleSubmit(event) {
+  handleSubmit = event => {
     event.preventDefault();
-
-    const afterLogin = (result) => {
-        const accessToken = result.getAccessToken().getJwtToken();
-        const idToken = result.getIdToken().getJwtToken();
-        const refreshToken = result.getRefreshToken().getToken();
-
-        const user = this.state.user;
-        user.getUserAttributes((err, result) => {
-          const userMacAddressAttr = 
-            result.find(function(attribute){return attribute.Name === awsCognitoConfig.macAttrName});
-          if (!userMacAddressAttr) {
-            const error = 
-              new Error('No mac address found this user. Please contact your administrator to set up this account.');
-            throw error;
-          }
-          this.props.onLogin({
-            accessToken,
-            idToken,
-            refreshToken,
-            mac: userMacAddressAttr.Value,
-          });
-
-          connectToDeviceShadow(
-              userMacAddressAttr.Value,
-              this.props.onDeviceUpdate,
-              this.props.onSuccessfulDeviceConnection
-          );
-
-          this.props.history.push(LOGIN_SUCCESS_REDIRECT);
-        });
-    };
-
-    // Attempt login with currently entered credentials, executing the afterLogin function defined above
-    // if the login is successful.
-    this.login(this.state.username, this.state.password).then(afterLogin).catch((err) => alert(err));
+    // Attempt login with currently entered credentials
+    this.login(this.state.username, this.state.password);
   }
 
   render() {
     return (
       <Panel className='custom-panel login-panel'>
         <div className="Login">
-          <form onSubmit={(evt) => this.handleSubmit(evt)}>
+          <form onSubmit={this.handleSubmit}>
             <FormGroup controlId="username" bsSize="large">
               <ControlLabel>Email</ControlLabel>
               <FormControl

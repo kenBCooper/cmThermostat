@@ -28,7 +28,11 @@ export default class Sider extends React.Component<SiderProps, any> {
     static childContextTypes: {
         siderCollapsed: any;
     };
+    static contextTypes: {
+        siderHook: any;
+    };
     private mql;
+    private uniqueId;
     constructor(props: any);
     getChildContext(): {
         siderCollapsed: any;

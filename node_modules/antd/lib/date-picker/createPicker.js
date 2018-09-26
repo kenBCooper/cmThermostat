@@ -98,16 +98,23 @@ function createPicker(TheCalendar) {
             _this.handleChange = function (value) {
                 var props = _this.props;
                 if (!('value' in props)) {
-                    _this.setState({ value: value });
+                    _this.setState({
+                        value: value,
+                        showDate: value
+                    });
                 }
                 props.onChange(value, value && value.format(props.format) || '');
+            };
+            _this.handleCalendarChange = function (value) {
+                _this.setState({ showDate: value });
             };
             var value = props.value || props.defaultValue;
             if (value && !_moment2['default'].isMoment(value)) {
                 throw new Error('The value/defaultValue of DatePicker or MonthPicker must be ' + 'a moment object after `antd@2.0`, see: https://u.ant.design/date-picker-value');
             }
             _this.state = {
-                value: value
+                value: value,
+                showDate: value
             };
             return _this;
         }
@@ -117,7 +124,8 @@ function createPicker(TheCalendar) {
             value: function componentWillReceiveProps(nextProps) {
                 if ('value' in nextProps) {
                     this.setState({
-                        value: nextProps.value
+                        value: nextProps.value,
+                        showDate: nextProps.value
                     });
                 }
             }
@@ -126,7 +134,9 @@ function createPicker(TheCalendar) {
             value: function render() {
                 var _classNames;
 
-                var value = this.state.value;
+                var _state = this.state,
+                    value = _state.value,
+                    showDate = _state.showDate;
 
                 var props = (0, _omit2['default'])(this.props, ['onChange']);
                 var prefixCls = props.prefixCls,
@@ -148,7 +158,7 @@ function createPicker(TheCalendar) {
                     };
                 }
                 (0, _warning2['default'])(!('onOK' in props), 'It should be `DatePicker[onOk]` or `MonthPicker[onOk]`, instead of `onOK`!');
-                var calendar = _react2['default'].createElement(TheCalendar, (0, _extends3['default'])({}, calendarHandler, { disabledDate: props.disabledDate, disabledTime: disabledTime, locale: locale.lang, timePicker: props.timePicker, defaultValue: props.defaultPickerValue || (0, _moment2['default'])(), dateInputPlaceholder: placeholder, prefixCls: prefixCls, className: calendarClassName, onOk: props.onOk, format: props.format, showToday: props.showToday, monthCellContentRender: props.monthCellContentRender, renderFooter: this.renderFooter }));
+                var calendar = _react2['default'].createElement(TheCalendar, (0, _extends3['default'])({}, calendarHandler, { disabledDate: props.disabledDate, disabledTime: disabledTime, locale: locale.lang, timePicker: props.timePicker, defaultValue: props.defaultPickerValue || (0, _moment2['default'])(), dateInputPlaceholder: placeholder, prefixCls: prefixCls, className: calendarClassName, onOk: props.onOk, format: props.format, showToday: props.showToday, monthCellContentRender: props.monthCellContentRender, renderFooter: this.renderFooter, onChange: this.handleCalendarChange, value: showDate }));
                 // default width for showTime
                 var pickerStyle = {};
                 if (props.showTime) {
@@ -176,7 +186,7 @@ function createPicker(TheCalendar) {
                     { className: (0, _classnames2['default'])(props.className, props.pickerClass), style: style },
                     _react2['default'].createElement(
                         _Picker2['default'],
-                        (0, _extends3['default'])({}, props, pickerChangeHandler, { calendar: calendar, value: pickerValue, prefixCls: prefixCls + '-picker-container', style: props.popupStyle }),
+                        (0, _extends3['default'])({}, props, pickerChangeHandler, { calendar: calendar, value: value, prefixCls: prefixCls + '-picker-container', style: props.popupStyle }),
                         input
                     )
                 );

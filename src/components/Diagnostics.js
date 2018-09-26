@@ -8,8 +8,10 @@ import ThermostatActionIcon from './ThermostatActionIcon';
 import LockIcon from './LockIcon';
 import { 
   getDiagnosticForCurrentSystem,
-  getZonesForCurrentSystem
+  getZonesForCurrentSystem,
+  isCurrentSystemCelsius,
 } from '../util/deviceShadowUtil';
+import { formatTemp } from '../util/tempUtil';
 import { getCurrentSystemNumber } from '../util/urlUtil';
 
 import './Table.css';
@@ -44,12 +46,14 @@ const LONG_TEXT_CUTOFF = 4;
 
 const Diagnostics = (props) => {
   const diagnostics = getDiagnosticForCurrentSystem(props.deviceShadow);
-  const zones = getZonesForCurrentSystem(props.deviceShadow)
+  const zones = getZonesForCurrentSystem(props.deviceShadow);
+  const isCelsius = isCurrentSystemCelsius(props.deviceShadow);
+
   if (!diagnostics || !zones) {
     return <LoadingIndicator />;
   } else {
     // There are two ways to use this function, either give the current lock status
-    // (currLockStatus) rely on the funtion to automatically toggle to the opposite
+    // (currLockStatus), and rely on the function to automatically toggle to the opposite
     // lock status, or explicitly pass in a lock status to set the zone to (setToLockStatus).
     const toggleZoneLock = (zoneId, currLockStatus, setToLockStatus) => {
       let nextLockStatus;
@@ -112,16 +116,16 @@ const Diagnostics = (props) => {
       );
     }
 
-    const renderSystemDiagnostics = (diagnostics) => {
+    const renderSystemDiagnostics = (diagnostics, isCelsius) => {
       const isGenX = getCurrentSystemNumber() === '0';
       return (
         <div>
           <span className="custom-list-header">System Diagnostics</span>
           <ul className="custom-list system-diagnostic-list">
-            <li>{renderSystemDiagnosticTempItem(`${diagnostics.leavingAir}°`, 'Leaving Air')}</li>
-            <li>{renderSystemDiagnosticTempItem(`${diagnostics.returnAir}°`, 'Return Air')}</li>
+            <li>{renderSystemDiagnosticTempItem(`${formatTemp(diagnostics.leavingAir, isCelsius)}°`, 'Leaving Air')}</li>
+            <li>{renderSystemDiagnosticTempItem(`${formatTemp(diagnostics.returnAir, isCelsius)}°`, 'Return Air')}</li>
             {(!isGenX && diagnostics.outsideAir === '0') ? null : (
-              <li>{renderSystemDiagnosticTempItem(`${diagnostics.outsideAir}°`, 'Outside Air')}</li>
+              <li>{renderSystemDiagnosticTempItem(`${formatTemp(diagnostics.outsideAir, isCelsius)}°`, 'Outside Air')}</li>
             )}
             <li>{
               renderSystemDiagnosticStatusItem(
@@ -134,7 +138,7 @@ const Diagnostics = (props) => {
       );
     };
 
-    const renderSaStatDiagnostics = (zones) => {
+    const renderSaStatDiagnostics = (zones, isCelsius) => {
       const hasSaStat = Object.keys(zones).some((zoneId) => {
         return zones[zoneId].standaloneThermostat === STANDALONE_VALUE
       });
@@ -158,8 +162,8 @@ const Diagnostics = (props) => {
                   <tr key={index}>
                     <td className="custom-table-cell">{zoneId}</td>
                     <td className="custom-table-cell">{`${saStatZone.humidity}%`}</td>
-                    <td className="custom-table-cell">{`${saStatZone.leavingAir}°`}</td>
-                    <td className="custom-table-cell">{`${saStatZone.returnAir}°`}</td>
+                    <td className="custom-table-cell">{`${formatTemp(saStatZone.leavingAir, isCelsius)}°`}</td>
+                    <td className="custom-table-cell">{`${formatTemp(saStatZone.returnAir, isCelsius)}°`}</td>
                   </tr>
                 );
               } else {
@@ -189,7 +193,7 @@ const Diagnostics = (props) => {
 
     return (
       <div className="diagnostics-container">
-        {renderSystemDiagnostics(diagnostics)}
+        {renderSystemDiagnostics(diagnostics, isCelsius)}
         <Table className='custom-table'>
           <thead className='custom-table-heading'>
             <tr>
@@ -225,7 +229,7 @@ const Diagnostics = (props) => {
           <Button onClick={unlockAllZones.bind(this)} block>Unlock All</Button>
           <Button onClick={lockAllZones.bind(this)} block>Lock All</Button>
         </div>
-        {renderSaStatDiagnostics(zones)}
+        {renderSaStatDiagnostics(zones, isCelsius)}
       </div>
     );
   }

@@ -9,6 +9,7 @@ export interface AbstractTooltipProps {
     overlayStyle?: React.CSSProperties;
     placement?: TooltipPlacement;
     builtinPlacements?: Object;
+    defaultVisible?: boolean;
     visible?: boolean;
     onVisibleChange?: (visible: boolean) => void;
     mouseEnterDelay?: number;

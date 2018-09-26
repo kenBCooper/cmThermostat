@@ -3,7 +3,8 @@ import { connect } from 'react-redux';
 import { Table } from 'react-bootstrap';
 
 import LoadingIndicator from './LoadingIndicator';
-import { getZonesForCurrentSystem } from '../util/deviceShadowUtil';
+import { getZonesForCurrentSystem, isCurrentSystemCelsius } from '../util/deviceShadowUtil';
+import { formatTemp } from '../util/tempUtil';
 import ThermostatActionIcon from './ThermostatActionIcon';
 import ZoneDetail from './ZoneDetail';
 
@@ -34,7 +35,10 @@ class ZoneList extends Component {
     Object.keys(zonesData).forEach((zoneNumber) => {
       mappedZoneData.push({
         [ZONE_LIST_HEADERS.ZONE]: zoneNumber,
-        [ZONE_LIST_HEADERS.TEMP]: zonesData[zoneNumber].currentTemp,
+        [ZONE_LIST_HEADERS.TEMP]: formatTemp(
+            zonesData[zoneNumber].currentTemp,
+            this.props.isCelsius,
+          ),
         [ZONE_LIST_HEADERS.CURR_ACTION]:
           this.formatActionDisplay(zonesData[zoneNumber]),
         [ZONE_LIST_HEADERS.OCC_HEAT_COOL_SETPOINTS]:
@@ -62,17 +66,19 @@ class ZoneList extends Component {
   }
 
   formatOccupiedSetpoints(heatPoint, coolPoint, isOccupied) {
+    const isCelsius = this.props.isCelsius;
     return (
       <div className={(isOccupied === '1') ? 'bold' : ''}>
-        {heatPoint} / {coolPoint}
+        {formatTemp(heatPoint, isCelsius)} / {formatTemp(coolPoint, isCelsius)}
       </div>
     );
   }
 
   formatUnoccupiedSetpoints(heatPoint, coolPoint, isOccupied) {
+    const isCelsius = this.props.isCelsius;
     return (
       <div className={(isOccupied === '0') ? 'bold' : ''}>
-        {heatPoint} / {coolPoint}
+        {formatTemp(heatPoint, isCelsius)} / {formatTemp(coolPoint, isCelsius)}
       </div>
     );
   }
@@ -106,7 +112,8 @@ class ZoneList extends Component {
           <ZoneDetail zoneData={zones[this.state.zoneDetailNumber]}
                       zoneId={this.state.zoneDetailNumber}
                       show={this.state.showZoneDetail}
-                      onHide={this.closeZoneDetail}/>
+                      onHide={this.closeZoneDetail}
+                      isCelsius={this.props.isCelsius}/>
         </div>
       );
     }
@@ -156,6 +163,7 @@ const mapStateToProps = (state) => {
   return {
     deviceShadow: state.shadow,
     connected: state.connected,
+    isCelsius: isCurrentSystemCelsius(state.shadow),
   }
 }
 

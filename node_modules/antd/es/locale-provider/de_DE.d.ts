@@ -42,5 +42,11 @@ declare const _default: {
     Select: {
         notFoundContent: string;
     };
+    Upload: {
+        uploading: string;
+        removeFile: string;
+        uploadError: string;
+        previewFile: string;
+    };
 };
 export default _default;

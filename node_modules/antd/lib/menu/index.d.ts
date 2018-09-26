@@ -1,5 +1,6 @@
 /// <reference types="react" />
 import React from 'react';
+import Item from './MenuItem';
 export interface SelectParam {
     key: string;
     keyPath: Array<string>;
@@ -39,7 +40,7 @@ export interface MenuProps {
 }
 export default class Menu extends React.Component<MenuProps, any> {
     static Divider: any;
-    static Item: any;
+    static Item: typeof Item;
     static SubMenu: any;
     static ItemGroup: any;
     static defaultProps: {
@@ -54,6 +55,7 @@ export default class Menu extends React.Component<MenuProps, any> {
         siderCollapsed: any;
     };
     switchModeFromInline: boolean;
+    leaveAnimationExecutedWhenInlineCollapsed: boolean;
     inlineOpenKeys: never[];
     constructor(props: any);
     getChildContext(): {

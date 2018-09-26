@@ -79,6 +79,15 @@ var dimensionMap = {
     lg: '1200px',
     xl: '1600px'
 };
+var generateId = function () {
+    var i = 0;
+    return function () {
+        var prefix = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+
+        i += 1;
+        return '' + prefix + i;
+    };
+}();
 
 var Sider = function (_React$Component) {
     (0, _inherits3['default'])(Sider, _React$Component);
@@ -113,6 +122,7 @@ var Sider = function (_React$Component) {
         _this.belowShowChange = function () {
             _this.setState({ belowShow: !_this.state.belowShow });
         };
+        _this.uniqueId = generateId('ant-sider-');
         var matchMedia = void 0;
         if (typeof window !== 'undefined') {
             matchMedia = window.matchMedia;
@@ -156,12 +166,18 @@ var Sider = function (_React$Component) {
                 this.mql.addListener(this.responsiveHandler);
                 this.responsiveHandler(this.mql);
             }
+            if (this.context.siderHook) {
+                this.context.siderHook.addSider(this.uniqueId);
+            }
         }
     }, {
         key: 'componentWillUnmount',
         value: function componentWillUnmount() {
             if (this.mql) {
                 this.mql.removeListener(this.responsiveHandler);
+            }
+            if (this.context.siderHook) {
+                this.context.siderHook.removeSider(this.uniqueId);
             }
         }
     }, {
@@ -229,5 +245,8 @@ Sider.defaultProps = {
 };
 Sider.childContextTypes = {
     siderCollapsed: _propTypes2['default'].bool
+};
+Sider.contextTypes = {
+    siderHook: _propTypes2['default'].object
 };
 module.exports = exports['default'];

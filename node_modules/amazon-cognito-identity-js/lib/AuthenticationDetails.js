@@ -40,8 +40,8 @@ var AuthenticationDetails = function () {
         Password = _ref.Password,
         AuthParameters = _ref.AuthParameters;
 
-    this.validationData = ValidationData || [];
-    this.authParameters = AuthParameters || [];
+    this.validationData = ValidationData || {};
+    this.authParameters = AuthParameters || {};
     this.username = Username;
     this.password = Password;
   }

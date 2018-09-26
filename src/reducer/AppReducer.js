@@ -24,6 +24,7 @@ const DEFAULT_STATE = {
       diagnostics: undefined,
       discover: undefined,
 			vacations: undefined,
+      systemConfig: undefined,
     },
   }
 };
@@ -86,10 +87,14 @@ const receiveDeviceShadowUpdate = (state, action) => {
         },
 				vacations: {
 					...state.shadow[systemNumber].vacations,
-					...updatedShadowState.vacations
-				}
-      } 
-    }
+					...updatedShadowState.vacations,
+				},
+        systemConfig: {
+          ...state.shadow[systemNumber].systemConfig,
+          ...updatedShadowState.systemConfig,
+        },
+      },
+    };
   // If shadow data for a new system is being added for the first time,
   // we have no old data to merge with it.
   } else {
@@ -107,9 +112,12 @@ const receiveDeviceShadowUpdate = (state, action) => {
 				},
 				vacations: {
 					...updatedShadowState.vacations,
-				}
-      } 
-    }
+				},
+        systemConfig: {
+          ...updatedShadowState.systemConfig,
+        },
+      },
+    };
   }
 
   return {

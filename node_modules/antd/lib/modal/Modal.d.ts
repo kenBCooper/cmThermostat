@@ -34,6 +34,9 @@ export interface ModalProps {
     className?: string;
     getContainer?: (instance: React.ReactInstance) => HTMLElement;
     zIndex?: number;
+    bodyStyle?: React.CSSProperties;
+    maskStyle?: React.CSSProperties;
+    mask?: boolean;
 }
 export interface ModalContext {
     antLocale?: {

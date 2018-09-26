@@ -25,8 +25,6 @@ const ZONE_UPDATE = 'Z';
 
 let thingName = undefined;
 let mqttClient;
-let onShadowUpdate;
-let onConnectionSuccess;
 let congnitoCredentials;
 
 const setThingName = (macAddress) => {
@@ -208,6 +206,10 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
       const vacationData = parseVacationData(valuesArr);
       parsedDeviceShadow.vacations = vacationData;
       systemNumber = valuesArr[0];
+    } else if (key === 'C') {
+      const systemConfigData = parseSystemConfigurationData(valuesArr);
+      parsedDeviceShadow.systemConfig = systemConfigData;
+      systemNumber = valuesArr[0];
     } else {
       // It is important to always have the relevant system number, even if we have
       // an update containing an unexpected key.
@@ -224,11 +226,6 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
 export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
   if (!macAddress) throw new Error('no mac address provided for device connection');
   if (!thingName) setThingName(macAddress);
-
-  // Save a reference to the onUpdate and onSuccess callbacks for future use when restarting
-  // the connection.
-  onShadowUpdate = onUpdate;
-  onConnectionSuccess = onSuccess;
 
   let initialConnection = false;
   configureCognitoId((credentials) => {
@@ -337,12 +334,6 @@ export const retryShadowConnection = () => {
     () => mqttClient.publish(updateTopicName(), createBaseRequestMessage(0)), 3000);
   window.setTimeout(
     () => mqttClient.publish(updateTopicName(), createBaseRequestMessage(0)), 4000);
-
-  // Do we need to completely re-establish connection? or does this do the trick?
-  // mqttClient.end(false, () => {
-  //   mqttClient = null;
-  //   connectToDeviceShadow(thingName, onShadowUpdate, onConnectionSuccess);
-  // });
 }
 
 const configureCognitoId = (onSuccess) => {
@@ -400,11 +391,17 @@ const parseDiagnosticData = (diagnosticValues) => {
   });
 
   return parsedDiagnosticData;
-}
+};
 
 const parseDiscoverData = (discoverValues) => {
   return {
     rmCount: discoverValues[0],
+  };
+};
+
+const parseSystemConfigurationData = (systemConfigValues) => {
+  return {
+    tempFormat: systemConfigValues[10],
   };
 }
 
@@ -413,7 +410,6 @@ const parseVacationData = (vacationValues) => {
 	const LENGTH_OFFSET = 0;
 	const MONTH_OFFSET = 1;
 	const DAY_OFFSET = 2;
-
 	let parsedVacationData = {};
 
 	// max of 20 vacations at any time
@@ -579,7 +575,18 @@ export const getVacationsForCurrentSystem = (deviceShadow) => {
   }
 }
 
+export const isCurrentSystemCelsius = (deviceShadow) => {
+  const systemNumber = getCurrentSystemNumber();
+  const currentSystem = deviceShadow[systemNumber];
+  if (currentSystem && currentSystem.systemConfig) {
+    return currentSystem.systemConfig.tempFormat === '1';
+  } else {
+    requestDeviceShadowForSystem(systemNumber);
+    return false;
+  }
+}
+
 const requestDeviceShadowForSystem = (systemNumber) => {
-  mqttClient.publish(updateTopicName(), createBaseRequestMessage(systemNumber));
+  mqttClient && mqttClient.publish(updateTopicName(), createBaseRequestMessage(systemNumber));
 }
 

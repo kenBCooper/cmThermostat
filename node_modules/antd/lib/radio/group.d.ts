@@ -9,6 +9,7 @@ export interface RadioGroupProps extends AbstractCheckboxGroupProps {
     onMouseEnter?: React.FormEventHandler<any>;
     onMouseLeave?: React.FormEventHandler<any>;
     name?: string;
+    id?: string;
 }
 export default class RadioGroup extends React.Component<RadioGroupProps, any> {
     static defaultProps: {

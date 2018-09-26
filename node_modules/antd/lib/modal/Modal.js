@@ -117,7 +117,7 @@ var Modal = function (_React$Component) {
                 { key: 'confirm', type: okType, size: 'large', loading: confirmLoading, onClick: this.handleOk },
                 okText || '确定'
             )];
-            return _react2['default'].createElement(_rcDialog2['default'], (0, _extends3['default'])({ onClose: this.handleCancel, footer: footer === undefined ? defaultFooter : footer }, this.props, { visible: visible, mousePosition: mousePosition }));
+            return _react2['default'].createElement(_rcDialog2['default'], (0, _extends3['default'])({}, this.props, { footer: footer === undefined ? defaultFooter : footer, visible: visible, mousePosition: mousePosition, onClose: this.handleCancel }));
         }
     }]);
     return Modal;

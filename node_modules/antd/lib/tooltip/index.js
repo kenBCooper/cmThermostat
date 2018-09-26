@@ -105,7 +105,7 @@ var Tooltip = function (_React$Component) {
             domNode.style.transformOrigin = transformOrigin.left + ' ' + transformOrigin.top;
         };
         _this.state = {
-            visible: !!props.visible
+            visible: !!props.visible || !!props.defaultVisible
         };
         return _this;
     }

@@ -86,4 +86,4 @@ export const DIAGNOSTIC_PARSE_LIST = {
   22: 'errorCodeZone19',
   23: 'errorCodeZone20',
   24: 'systemStatus',
-}
+};

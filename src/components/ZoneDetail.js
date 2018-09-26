@@ -3,14 +3,15 @@ import { Modal } from 'react-bootstrap';
 import { connect } from 'react-redux';
 import InputRange from 'react-input-range';
 
+import { formatTemp } from '../util/tempUtil';
 import { updateZone } from '../actions/AppActions';
 import ThermostatActionIcon from './ThermostatActionIcon';
 
 import 'react-input-range/lib/css/index.css';
 import './ZoneDetail.css';
 
-const MIN_TEMP = 50;
-const MAX_TEMP = 100;
+const MIN_TEMP = 55;
+const MAX_TEMP = 85;
 
 class ZoneDetail extends Component {
   render() {
@@ -46,7 +47,7 @@ class ZoneDetail extends Component {
       <div className='zone-detail-body'>
         <div className='temp-display'>
           <p>
-            {zoneData.currentTemp}°
+            {formatTemp(zoneData.currentTemp, this.props.isCelsius)}°
             <ThermostatActionIcon zoneData={zoneData} />
           </p>
         </div>
@@ -61,24 +62,24 @@ class ZoneDetail extends Component {
         <div className='temp-control'>
           <h3>Occupied Temp Control</h3>
           <InputRange
-            maxValue={MAX_TEMP}
-            minValue={MIN_TEMP}
-            formatLabel={value => `${value}`}
+            maxValue={parseFloat(MAX_TEMP)}
+            minValue={parseFloat(MIN_TEMP)}
+            formatLabel={value => `${formatTemp(value, this.props.isCelsius)}`}
             value={{
-              min: parseInt(zoneData.occupiedHeat, 10),
-              max: parseInt(zoneData.occupiedCool, 10),
+              min: parseFloat(zoneData.occupiedHeat),
+              max: parseFloat(zoneData.occupiedCool),
             }}
             onChange={(value) => this.onZoneUpdate(value, true)} />
         </div>
         <div className='temp-control'>
           <h3>Unoccupied Temp Control</h3>
           <InputRange
-            maxValue={MAX_TEMP}
-            minValue={MIN_TEMP}
-            formatLabel={value => `${value}`}
+            maxValue={parseFloat(MAX_TEMP)}
+            minValue={parseFloat(MIN_TEMP)}
+            formatLabel={value => `${formatTemp(value, this.props.isCelsius)}`}
             value={{
-              min: parseInt(zoneData.unoccupiedHeat, 10),
-              max: parseInt(zoneData.unoccupiedCool, 10),
+              min: parseFloat(zoneData.unoccupiedHeat),
+              max: parseFloat(zoneData.unoccupiedCool),
             }}
             onChange={(value) => this.onZoneUpdate(value, false)} />
         </div>
