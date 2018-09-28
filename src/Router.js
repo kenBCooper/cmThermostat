@@ -2,37 +2,45 @@ import React from 'react';
 import { BrowserRouter, Route, Redirect, Switch } from 'react-router-dom';
 import { connect } from 'react-redux';
 
+import { selectIsCurrentSystemLoaded, selectUserInfo } from './selectors/AppSelectors';
 import AppPanel from './components/AppPanel';
 import ZoneList from './components/ZoneList';
 import Diagnostics from './components/Diagnostics';
 import Schedule from './components/Schedule';
 import Login from './components/Login';
+import LoadingIndicator from './components/LoadingIndicator';
 
 const Router = (props) => {
   const isLoggedIn = isAuthenticated(props.userInfo);
+  const isCurrentSystemLoading = props.isCurrentSystemLoading;
+
   return (
     <BrowserRouter>
       <div>
         <AppPanel isLoggedIn={isLoggedIn}>
           <Switch>
             <LoggedOutOnlyRoute exact
-              authStatus={isLoggedIn}
+              isLoggedIn={isLoggedIn}
               path="/login"
               component={Login}/>
             <PrivateRoute
-              authStatus={isLoggedIn}
-              path="/:rmId/d"
+              isLoggedIn={isLoggedIn}
+              isLoading={isCurrentSystemLoading}
+              path="/d"
               component={Diagnostics}/>
             <PrivateRoute
-              authStatus={isLoggedIn}
-              path="/:rmId/s"
+              isLoggedIn={isLoggedIn}
+              isLoading={isCurrentSystemLoading}
+              path="/s"
               component={Schedule}/>
             <PrivateRoute
-              authStatus={isLoggedIn}
-              path="/:rmId"
+              isLoggedIn={isLoggedIn}
+              isLoading={isCurrentSystemLoading}
+              path="/z"
               component={ZoneList}/>
             <PrivateRoute
-              authStatus={isLoggedIn}
+              isLoggedIn={isLoggedIn}
+              isLoading={isCurrentSystemLoading}
               component={ZoneList}/>
           </Switch>
         </AppPanel>
@@ -44,16 +52,16 @@ const Router = (props) => {
 const isAuthenticated = (userInfo) => {
   // The only thing we currently need form a logged in user is the mac address,
   // so for now, we will use that as the determining factor as to someone is authenticated or not.
-  return !!userInfo.mac;
+  return !!userInfo.macList.length;
 }
 
 // Any LoggedOutOnlyRoute will redirect you to the app home page if you try to navigate to
 // it while logged in.
 const LoggedOutOnlyRoute = ({ component: Component, ...rest }) => {
-  const authStatus = rest.authStatus;
+  const isLoggedIn = rest.isLoggedIn;
 
   const renderRoute = (props) => (
-    authStatus ? (
+    isLoggedIn ? (
       <Redirect to={{
         pathname: '/',
         state: { from: props.location }
@@ -71,18 +79,25 @@ const LoggedOutOnlyRoute = ({ component: Component, ...rest }) => {
 // Any PrivateRoute will redirect you to the login page if you try to navigate to it while not
 // logged in.
 const PrivateRoute = ({ component: Component, ...rest }) => {
-  const authStatus = rest.authStatus;
+  const isLoggedIn = rest.isLoggedIn;
+  const isLoading = rest.isLoading;
 
-  const renderRoute = (props) => (
-    authStatus ? (
-      <Component {...props}/>
-    ) : (
-      <Redirect to={{
-        pathname: '/login',
-        state: { from: props.location }
-      }}/>
-    )
-  );
+  const renderRoute = (props) => {
+    if (!isLoggedIn) {
+      return (
+        <Redirect to={{
+          pathname: '/login',
+          state: { from: props.location }
+        }}/>
+      );
+    }
+
+    if (isLoading) {
+      return <LoadingIndicator />;
+    }
+
+    return <Component {...props}/>;
+  }
 
   return (
     <Route {...rest} render={renderRoute}/>
@@ -90,9 +105,10 @@ const PrivateRoute = ({ component: Component, ...rest }) => {
 }
 
 const mapStateToProps = (state) => {
-    return {
-        userInfo: state.user,
-    }
+  return {
+    userInfo: selectUserInfo(state),
+    isCurrentSystemLoading: !selectIsCurrentSystemLoaded(state),
+  }
 }
 
 export default connect(mapStateToProps, undefined)(Router);

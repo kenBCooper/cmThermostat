@@ -1,11 +1,12 @@
 import aws from 'aws-sdk';
 import AWSMqtt from 'aws-mqtt-client';
+import moment from 'moment';
 
-import { awsConfig } from '../aws-configuration';
-import { getCurrentSystemNumber } from './urlUtil';
+import { getStore } from './reduxUtil';
+import { selectCurrentGenX, selectIsSubscribedToDevice } from '../selectors/AppSelectors';
+import { awsDeviceShadowConfig } from '../aws-configuration';
 import { STAT_PARSE_LIST, DIAGNOSTIC_PARSE_LIST } from './deviceShadowParseConfig';
 import { DAY_NAMES, AM_PM_VALUES } from '../constants/ScheduleConstants';
-import moment from 'moment';
 
 // 3 sec debounce per unique zone update.
 const UPDATE_DEBOUNCE_TIME = 3500;
@@ -23,32 +24,30 @@ const PENDING_UPDATES = {};
 const VACATION_UPDATE = 'V';
 const ZONE_UPDATE = 'Z';
 
-let thingName = undefined;
 let mqttClient;
 let congnitoCredentials;
 
-const setThingName = (macAddress) => {
-  // All 4 digit mac addresses will have a 9 hard-coded before
-  if (macAddress.length === 4) {
-    thingName = `5410ec49${macAddress}`;
-  } else if (macAddress.length === 5){
-    thingName = `5410ec4${macAddress}`;
-  } else {
-    thingName = macAddress;
-  }
+const updateAcceptedTopicName = (macAddress) => {
+  return `$aws/things/${macAddress}/shadow/update/accepted`;
 }
 
-const updateAcceptedTopicName = () => {
-  return `$aws/things/${thingName}/shadow/update/accepted`;
-}
-
-const updateRejectedTopicName = () => {
-  return `$aws/things/${thingName}/shadow/update/rejected`;
+const updateRejectedTopicName = (macAddress) => {
+  return `$aws/things/${macAddress}/shadow/update/rejected`;
 }
 
 const updateTopicName = () => {
-  return `$aws/things/${thingName}/shadow/update`;
+  const store = getStore();
+  const state = store.getState();
+  const currentGenXMacAddress = selectCurrentGenX(state);
+  return `$aws/things/${currentGenXMacAddress}/shadow/update`;
 }
+
+const getCurrentMacAddress = () => {
+  const store = getStore();
+  const state = store.getState();
+  const currentGenXMacAddress = selectCurrentGenX(state);
+  return currentGenXMacAddress;
+};
 
 const createBaseRequestMessage = (systemNumber) => {
   return JSON.stringify({
@@ -223,103 +222,109 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
   return parsedDeviceShadow;
 }
 
-export const connectToDeviceShadow = (macAddress, onUpdate, onSuccess) => {
+export const subscribeToDevice = (macAddress, onSubscribe, onUpdate) => {
   if (!macAddress) throw new Error('no mac address provided for device connection');
-  if (!thingName) setThingName(macAddress);
 
-  let initialConnection = false;
-  configureCognitoId((credentials) => {
-    if (!congnitoCredentials) congnitoCredentials = credentials;
-    if (!mqttClient) {
-      mqttClient = new AWSMqtt({
-        accessKeyId: credentials.AccessKeyId,
-        secretAccessKey: credentials.SecretKey,
-        sessionToken: credentials.SessionToken,
-        endpointAddress: awsConfig.endpoint,
-        region: awsConfig.region,
-      });
+  // if no mqtt client, make one.
+  if (!mqttClient) {
+    createMqttClientConnection(() => {
+      createDeviceSubscription(macAddress, onSubscribe, onUpdate);
+    })
+  } else {
+    // If not currently subscribed to the provided mac/device. Create subscriptions.
+    if (hasExistingSubscription) {
+      return;
+    } else {
+      createDeviceSubscription(macAddress, onSubscribe, onUpdate);
     }
+  }
+}
+
+const hasExistingSubscription = (macAddress) => {
+  const store = getStore();
+  const state = store.getState();
+  return selectIsSubscribedToDevice(state, macAddress);
+}
+
+const createMqttClientConnection = (onConnect) => {
+  const createMqttClient = (credentials) => {
+    mqttClient = new AWSMqtt({
+      accessKeyId: credentials.AccessKeyId,
+      secretAccessKey: credentials.SecretKey,
+      sessionToken: credentials.SessionToken,
+      endpointAddress: awsDeviceShadowConfig.endpoint,
+      region: awsDeviceShadowConfig.region,
+    });
 
     mqttClient.on('connect', () => {
       console.log('connected to iot mqtt websocket');
-      // Set up intial subscriptions if this is the first connection.
-      if (!initialConnection) {
-        mqttClient.subscribe(updateAcceptedTopicName());
-        mqttClient.subscribe(updateRejectedTopicName());                
-        initialConnection = true;
-      }
-
-      mqttClient.publish(updateTopicName(), createBaseRequestMessage(0));
-
-     // // DUMMY FOR WHEN BOARD IS DOWN
-     // onUpdate(JSON.parse(`{
-     //   "R": "0,0,",
-     //   "C": "0,144,45,0,4,2,0,3,0,20,0,2,0,0,6,11,8,4,43,1,17,",
-     //   "D": "0,78,32,32,3,0,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-     //   "V": "0,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,2,",
-     //   "DIS": "3,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,",
-     //   "P": "0,1,2,3,4,",
-     //   "S1": "0,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-     //   "S2": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-     //   "S3": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-     //   "S4": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-     //   "S5": "0,1,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,2,70,75,25,0,",
-     //   "S6": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-     //   "S7": "0,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-     // }`));
-
-     // onUpdate(JSON.parse(`{
-     //   "D": "1,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-     //   "S1": "1,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-     //   "S2": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-     //   "S3": "1,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-     // }`));
-
-     // onUpdate(JSON.parse(`{
-     //   "D": "2,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-     //   "S1": "2,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-     //   "S2": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-     //   "S3": "2,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-     // }`));
-
-     // onUpdate(JSON.parse(`{
-     //   "D": "3,78,32,32,3,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,",
-     //   "S1": "3,0,75,90,88,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,7,0,0,3,3,1,0,70,75,25,0,",
-     //   "S2": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,",
-     //   "S3": "3,0,75,83,81,62,60,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,5,0,1,6,0,0,3,3,1,0,70,75,25,0,"
-     // }`));
+      onConnect();
     });
+  }
 
-    mqttClient.on('message', (topic, message) => {
-      // For debugging
-      // console.log(`********* message received **********\n${topic}`);
-      // console.log(JSON.parse(message).state.reported);
-
-      if (topic === updateRejectedTopicName()) {
-        console.log('update rejected!');
-        console.log(`${message.toString()}`);
-      } else if (topic === updateAcceptedTopicName()) {
-        const messageJson = JSON.parse(message);
-        if (messageJson.state && messageJson.state.reported) {
-          const updatedShadowState = messageJson.state.reported
-
-          // Do not update local state if the server is returning an empty update.
-          // This happens as the device shadow periodically clears its state.
-          if (Object.keys(updatedShadowState).every((key) => {
-            return updatedShadowState[key] === null;
-          })) return;
-          // Do not update local state if the server is acknowledging a base request.
-          // Subsequent requests will contain the device shadow data needed. We know the server
-          // is responding to a base request if there is a R key in the payload with a value of:
-          // "<number>,0," - which is what the regex below tests for.
-          if (!!/[0-9]+,0,/.exec(updatedShadowState.R)) return;
-
-          onUpdate(updatedShadowState);
-        }
-      }
+  // If no device shadow credentials exist, get them (currently insecure).
+  if (!congnitoCredentials) {
+    configureCognitoId((credentials) => {
+      congnitoCredentials = credentials;
+      createMqttClient(congnitoCredentials);
     });
+  } else {
+    // Otherwise, use the existing credentials.
+    createMqttClient(congnitoCredentials);
+  }
+};
 
-    onSuccess(mqttClient);
+const createDeviceSubscription = (macAddress, onSubscribe, onUpdate) => {
+  mqttClient.subscribe(updateAcceptedTopicName(macAddress));
+  mqttClient.subscribe(updateRejectedTopicName(macAddress));
+
+  mqttClient.on('message', (topic, message) => {
+    // For debugging
+    // console.log(`********* message received **********\n${topic}`);
+    // console.log(JSON.parse(message).state.reported);
+
+    if (topic === updateRejectedTopicName(macAddress)) {
+      console.log('update rejected!');
+      console.log(`${message.toString()}`);
+
+    } else if (topic === updateAcceptedTopicName(macAddress)) {
+      const messageJson = JSON.parse(message);
+      if (messageJson.state && messageJson.state.reported) {
+        const updatedShadowState = messageJson.state.reported
+
+        // Do not update local state if the server is returning an empty update.
+        // This happens as the device shadow periodically clears its state.
+        if (Object.keys(updatedShadowState).every((key) => {
+          return updatedShadowState[key] === null;
+        })) return;
+
+        // Do not update local state if the server is acknowledging a base request.
+        // Subsequent requests will contain the device shadow data needed. We know the server
+        // is responding to a base request if there is a R key in the payload with a value of:
+        // "<number>,0," - which is what the regex below tests for.
+        if (!!/[0-9]+,0,/.exec(updatedShadowState.R)) return;
+
+        onUpdate(macAddress, updatedShadowState);
+      }
+    }
+  });
+
+  mqttClient.publish(updateTopicName(), createBaseRequestMessage(0));
+  onSubscribe(macAddress);
+};
+
+const createMqttClient = (credentials, onConnect, onSubscribe) => {
+  mqttClient = new AWSMqtt({
+    accessKeyId: credentials.AccessKeyId,
+    secretAccessKey: credentials.SecretKey,
+    sessionToken: credentials.SessionToken,
+    endpointAddress: awsDeviceShadowConfig.endpoint,
+    region: awsDeviceShadowConfig.region,
+  });
+
+  mqttClient.on('connect', () => {
+    console.log('connected to iot mqtt websocket');
+    onConnect();
   });
 }
 
@@ -338,10 +343,10 @@ export const retryShadowConnection = () => {
 
 const configureCognitoId = (onSuccess) => {
   // Initialize our configuration.
-  aws.config.region = awsConfig.region;
+  aws.config.region = awsDeviceShadowConfig.region;
 
   aws.config.credentials = new aws.CognitoIdentityCredentials({
-    IdentityPoolId: awsConfig.poolId
+    IdentityPoolId: awsDeviceShadowConfig.poolId
   });
 
   // Attempt to authenticate to the Cognito Identity Pool.  Note that this
@@ -350,7 +355,7 @@ const configureCognitoId = (onSuccess) => {
   var cognitoIdentity = new aws.CognitoIdentity();
   aws.config.credentials.get((err, data) => {
     if (!err) {
-      console.log('retrieved identity: ' + aws.config.credentials.identityId);
+      console.log('retrieved shadow identity: ' + aws.config.credentials.identityId);
       var params = {
         IdentityId: aws.config.credentials.identityId
       };
@@ -454,6 +459,7 @@ const getZoneUpdatePayload = (rawShadow, zoneId) => {
 
   return zoneUpdatePayload;
 }
+
 // Get specific vacation update payload, needed so we only send exactly what
 // has updated. Payload size must be kept to a minimum.
 const getVacUpdatePayload = (rawShadow) => {
@@ -467,126 +473,6 @@ const getVacUpdatePayload = (rawShadow) => {
   return updatePayload;
 }
 
-// Given a device shadow object, return the zones that apply to the currently displayed
-// system (GenX or RM).
-export const getZonesForCurrentSystem = (deviceShadow) => {
-  const systemNumber = getCurrentSystemNumber();
-  const currentSystem = deviceShadow[systemNumber];
-  if (currentSystem) {
-    return currentSystem.zones
-  } else {
-    requestDeviceShadowForSystem(systemNumber);
-    return undefined;
-  }
-}
-
-// Given a device shadow object, return the diagnostic data that applies to the currently displayed
-// system (GenX or RM).
-export const getDiagnosticForCurrentSystem = (deviceShadow) => {
-  const systemNumber = getCurrentSystemNumber();
-  const currentSystem = deviceShadow[systemNumber];
-  if (currentSystem) {
-    return currentSystem.diagnostics
-  } else {
-    requestDeviceShadowForSystem(systemNumber);
-    return undefined;
-  }
-}
-
-export const getMomentsForCurrentSchedules = (schedules) => {
-	// schedules: zone -> day -> start/ends
-	let moments = {};
-	Object.keys(schedules).forEach( (zone) => {
-		moments[zone] = {};
-		Object.keys(schedules[zone]).forEach( (day) => {
-			let dayTimes = schedules[zone][day];
-			let startMoment = moment(`${dayTimes.startHour}:${dayTimes.startMinute} ${dayTimes.startAmPm}`, 'h:mm a')
-			let endMoment = moment(`${dayTimes.endHour}:${dayTimes.endMinute} ${dayTimes.endAmPm}`, 'h:mm a')
-			moments[zone][day] = {
-				startMoment: startMoment,
-				endMoment: endMoment,
-			}
-		} )
-	} )
-	return moments;
-}
-
-export const getSchedulesForCurrentSystem = (deviceShadow) => {
-  const systemNumber = getCurrentSystemNumber();
-  const currentSystem = deviceShadow[systemNumber];
-  let systemSchedules = {};
-  Object.keys(currentSystem.zones).forEach((zoneNumber) => {
-    systemSchedules[zoneNumber] = getSchedulesForZone(currentSystem.zones[zoneNumber]);
-  });
-
-  return systemSchedules;
-}
-
-const getSchedulesForZone = (zone) => {
-  let zoneSchedule = {};
-  Object.keys(DAY_NAMES).forEach((dayName) => {
-    zoneSchedule[dayName] = {
-      startHour: formatHourOrMinuteString(
-        zone[`${DAY_NAMES[dayName]}OccupiedHour`]
-      ),
-      startMinute: formatHourOrMinuteString(
-        zone[`${DAY_NAMES[dayName]}OccupiedMinute`]
-      ),
-      startAmPm: getAmPmString(
-        zone[`${DAY_NAMES[dayName]}OccupiedAmPm`]
-      ),
-      endHour: formatHourOrMinuteString(
-        zone[`${DAY_NAMES[dayName]}UnoccupiedHour`]
-      ),
-      endMinute: formatHourOrMinuteString(
-        zone[`${DAY_NAMES[dayName]}UnoccupiedMinute`]
-      ),
-      endAmPm: getAmPmString(
-        zone[`${DAY_NAMES[dayName]}UnoccupiedAmPm`]
-      ),
-    }
-  });
-
-  return zoneSchedule;
-}
-
-const getAmPmString = (value) => {
-  return AM_PM_VALUES[value] || 'AM' //Fall back to AM if the value is invalid
-}
-
-const formatHourOrMinuteString = (numberString) => {
-  if (numberString.length > 1) {
-    return numberString;
-  } else if (numberString.length === 1) {
-    return `0${numberString}`;
-  } else {
-    return '00';
-  }
-}
-
-export const getVacationsForCurrentSystem = (deviceShadow) => {
-  const systemNumber = getCurrentSystemNumber();
-  const currentSystem = deviceShadow[systemNumber];
-  if (currentSystem) {
-    return currentSystem.vacations
-  } else {
-    requestDeviceShadowForSystem(systemNumber);
-    return undefined;
-  }
-}
-
-export const isCurrentSystemCelsius = (deviceShadow) => {
-  const systemNumber = getCurrentSystemNumber();
-  const currentSystem = deviceShadow[systemNumber];
-  if (currentSystem && currentSystem.systemConfig) {
-    return currentSystem.systemConfig.tempFormat === '1';
-  } else {
-    requestDeviceShadowForSystem(systemNumber);
-    return false;
-  }
-}
-
-const requestDeviceShadowForSystem = (systemNumber) => {
+export const requestDeviceShadowForSystem = (systemNumber) => {
   mqttClient && mqttClient.publish(updateTopicName(), createBaseRequestMessage(systemNumber));
 }
-

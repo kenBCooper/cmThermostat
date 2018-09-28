@@ -2,11 +2,14 @@ import React, { Component } from 'react';
 import { Collapse, Glyphicon } from 'react-bootstrap';
 import { withRouter } from 'react-router-dom'
 import { connect } from 'react-redux';
+// import SideMenu, { Item } from 'react-sidemenu';
+import 'react-sidemenu/dist/side-menu.css';
 
-import './NavSidebar.css';
 import logo from '../img/Zonex_Logo.png';
 import { retryShadowConnection } from '../util/deviceShadowUtil';
-import { resetShadow } from '../actions/AppActions';
+import { selectRmCountForGenX } from '../selectors/AppSelectors';
+import { resetShadow, setCurrentSystem } from '../actions/AppActions';
+import './NavSidebar.css';
 
 // We restrict the max height of the system list based on the max height of the app
 // panel - the extra non system list space we want to reserve.
@@ -17,61 +20,28 @@ class NavSideBar extends Component {
     super(props);
 
     this.state = {
+      systems: [
+        { rmCount: 0},
+      ],
+      expandedGenXs: {
+        0: false,
+      },
       showSystemList: false,
     };
   }
 
-  render() {
-    return (
-      <div className="nav-sidebar">
-        <img className="nav-sidebar-logo" src={logo}
-          alt="Zonex Systems Logo"/>
-        <ul className="nav-list">
-          <li onClick={this.toggleSystemMenu} className="nav-list-item nav-text">
-            <Glyphicon className="nav-icon-left" glyph="list"/>
-            System
-            <Glyphicon className="nav-icon-right"
-                       glyph={this.state.showSystemList ? "chevron-up" : "chevron-down"}/>
-          </li>
-          <Collapse in={this.state.showSystemList}
-                    onExit={this.disableScrollbarForCollapse}
-                    onEnter={this.disableScrollbarForCollapse}
-                    onExited={this.enableScrollBarAfterCollapse}
-                    onEntered={this.enableScrollBarAfterCollapse}>
-            <ul ref="systemList" className="system-list" style={{
-              maxHeight: (this.props.maxHeight - SYSTEM_LIST_BUFFER_SPACE) + 'px'}
-            }>
-              <li className="system-list-item nav-text">
-                <a onClick={this.handleNavigation} href="/0">
-                  GEN X
-                </a>
-              </li>
-              {this.renderGenxDropdownMenuItems()}
-            </ul>
-          </Collapse>
-        </ul>
-        <div className="nav-footer">
-          <div className="nav-text" onClick={this.onRefresh}>
-            <Glyphicon className="nav-icon-left" glyph="refresh"/>Refresh
-          </div>
-        </div>
-      </div>
-    );
+  onSelectSystem = (event) => {
+    const systemToSelect = parseInt(event.target.id);
+    this.props.onSelectSystem(systemToSelect);
   }
 
-  renderGenxDropdownMenuItems() {
-    let menuItems = [];
-    for (let i=0; i < this.getRmCount(); i++) {
-      menuItems.push(
-        <li className="system-list-item nav-text" key={i + 1}><a onClick={this.handleNavigation} href={`/${i+1}`} key={i + 1}>
-          {`RM${i+1}`}
-        </a></li>
-      );
-    }
-    return menuItems;
+  onRefresh = () => {
+    retryShadowConnection();
+    this.props.onRefresh();
+    this.props.history.push('/z')
   }
 
-  toggleSystemMenu = () => {
+  onToggleSystemMenu = () => {
     this.setState({
       showSystemList: !this.state.showSystemList,
     });
@@ -85,37 +55,84 @@ class NavSideBar extends Component {
 
   enableScrollBarAfterCollapse = () => {
     this.refs.systemList.style.overflowY = 'auto'; 
-  } 
-
-  getRmCount = () => {
-    // Discover data is universal, so we can always rely on the discover data in genx (system 0)
-    // to be true for all systems (RMs).
-    const currentDiscoverData = this.props.deviceShadow[0] && 
-      this.props.deviceShadow[0].discover;
-    return currentDiscoverData ? parseInt(currentDiscoverData.rmCount, 10) : 0;
   }
 
-  handleNavigation = (event) => {
-    event.preventDefault();
-    this.props.history.push(event.target.pathname)
+  render() {
+    return (
+      <div className="nav-sidebar">
+        <img className="nav-sidebar-logo" src={logo}
+          alt="Zonex Systems Logo"/>
+        <ul className="nav-list">
+          <li onClick={this.onToggleSystemMenu} className="nav-list-item nav-text">
+            <Glyphicon className="nav-icon-left" glyph="list"/>
+            System
+            <Glyphicon className="nav-icon-right"
+                       glyph={this.state.showSystemList ? "chevron-up" : "chevron-down"}/>
+          </li>
+          <Collapse in={this.state.showSystemList}
+                    onExit={this.disableScrollbarForCollapse}
+                    onEnter={this.disableScrollbarForCollapse}
+                    onExited={this.enableScrollBarAfterCollapse}
+                    onEntered={this.enableScrollBarAfterCollapse}>
+            <ul ref="systemList" className="system-list" style={{
+              maxHeight: (this.props.maxHeight - SYSTEM_LIST_BUFFER_SPACE) + 'px'}
+            }>
+              <li className="system-list-item nav-text" onClick={this.onSelectSystem} id="0">
+                GEN X
+              </li>
+              {this.renderGenxMenuItems()}
+            </ul>
+          </Collapse>
+        </ul>
+        <div className="nav-footer">
+          <div className="nav-text" onClick={this.onRefresh}>
+            <Glyphicon className="nav-icon-left" glyph="refresh"/>Refresh
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  onRefresh = () => {
-    retryShadowConnection();
-    this.props.onRefresh();
-    this.props.history.push('/0')
-  }
+  // renderMenuItem(label, id, depth, canToggle, onClick) {
+    // const onItemClick = () => {
+    //   canToggle && this.toggleSystemMenu();
+    //   onClick && onClick();
+    // }
+
+    // depth = depth || 0;
+
+    // const itemClassName = `nav-list-item nav-text nav-item-depth-${depth}`
+
+    // return (
+    //   <li className={itemClassName} onClick={onItemClick}>
+    //     {label}
+    //   </li>
+    // )
+  // }
+
+  renderGenxMenuItems() {
+    let menuItems = [];
+    for (let i=0; i < this.props.rmCount; i++) {
+      menuItems.push(
+        <li className="system-list-item nav-text" id={i + 1} key={i + 1} onClick={this.onSelectSystem}>
+          {`RM${i+1}`}
+        </li>
+      );
+    }
+    return menuItems;
+  };
 }
 
 const mapStateToProps = (state) => {
   return {
-    deviceShadow: state.shadow,
+    rmCount: selectRmCountForGenX(state),
   }
 }
 
 const mapDispatchToProps = (dispatch) => {
   return {
     onRefresh: () => dispatch(resetShadow()),
+    onSelectSystem: (systemNo) => dispatch(setCurrentSystem(systemNo))
   }
 }
 

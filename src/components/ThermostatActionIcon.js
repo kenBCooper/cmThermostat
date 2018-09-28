@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
-import { getDiagnosticForCurrentSystem } from '../util/deviceShadowUtil';
+import { selectDiagnosticsForCurrentSystem } from '../selectors/AppSelectors';
 import './ThermostatActionIcon.css';
 
 import heatIcon from '../img/heat_large.png';
@@ -22,7 +22,8 @@ class ThermostatActionIcon extends Component {
       const coolPoint = zoneData.occupiedStatus === '1' ? zoneData.occupiedCool : zoneData.unoccupiedCool;
       const standaloneThermostat = zoneData.standaloneThermostat === '1';
 
-      const diagnostics = getDiagnosticForCurrentSystem(this.props.deviceShadow);
+      const diagnostics = this.props.diagnostics;
+
       if (currentTemp < heatPoint) {
         imgSource = heatIcon;
         if (standaloneThermostat) {
@@ -57,7 +58,7 @@ class ThermostatActionIcon extends Component {
 
 const mapStateToProps = (state) => {
   return {
-    deviceShadow: state.shadow,
+    diagnostics: selectDiagnosticsForCurrentSystem(state),
   }
 };
 

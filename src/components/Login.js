@@ -12,13 +12,13 @@ import {
   AuthenticationDetails,
   CognitoUser
 } from 'amazon-cognito-identity-js';
-import { awsCognitoConfig } from '../aws-configuration.js'
-import { receiveUserInfo, receiveDeviceShadowUpdate, setConnectedStatus } from '../actions/AppActions';
-import { connectToDeviceShadow } from '../util/deviceShadowUtil';
+import { awsUserPoolConfig } from '../aws-configuration.js'
+import { receiveUserInfo, receiveDeviceShadowUpdate, setSubscriptionStatus } from '../actions/AppActions';
+import { connectToDeviceShadow, subscribeToDevice } from '../util/deviceShadowUtil';
 import './Login.css';
 import './Panel.css';
 
-const LOGIN_SUCCESS_REDIRECT = '/0';
+const LOGIN_SUCCESS_REDIRECT = '/z';
 
 class Login extends Component {
   constructor(props) {
@@ -32,9 +32,10 @@ class Login extends Component {
 
   login = (username, password) => {
     const userPool = new CognitoUserPool({
-      UserPoolId: 'us-west-2_BcvxalBCi',
-      ClientId: '4e89ncs6eab4e9s75fqb0ep9uj',
+      UserPoolId: awsUserPoolConfig.poolId,
+      ClientId: awsUserPoolConfig.appClientId,
     });
+
     const authenticationData = {
       Username: username,
       Password: password,
@@ -62,24 +63,28 @@ class Login extends Component {
     const user = this.state.user;
     user.getUserAttributes((err, result) => {
       const userMacAddressAttr = 
-        result.find(function(attribute){return attribute.Name === awsCognitoConfig.macAttrName});
+        result.find(function(attribute){return attribute.Name === awsUserPoolConfig.macAttrName});
       if (!userMacAddressAttr) {
         const error = 
           new Error('No mac address found this user. Please contact your administrator to set up this account.');
         throw error;
       }
+
+      const combinedMacString = userMacAddressAttr.Value || '';
+      const macList = combinedMacString.match(/.{12}/g) || [];
+
       this.props.onLogin({
         accessToken,
         idToken,
         refreshToken,
-        mac: userMacAddressAttr.Value,
+        macList,
       });
 
-      connectToDeviceShadow(
-          userMacAddressAttr.Value,
-          this.props.onDeviceUpdate,
-          this.props.onSuccessfulDeviceConnection
-      );
+      subscribeToDevice(
+        macList[0],
+        this.props.onDeviceSubscription,
+        this.props.onDeviceUpdate,
+      )
 
       this.props.history.push(LOGIN_SUCCESS_REDIRECT);
     });
@@ -136,11 +141,11 @@ class Login extends Component {
 }
 
 const mapDispatchToProps = (dispatch) => {
-    return {
-        onLogin: (userInfo) => dispatch(receiveUserInfo(userInfo)),
-        onDeviceUpdate: (message) => dispatch(receiveDeviceShadowUpdate(message)),
-        onSuccessfulDeviceConnection: () => dispatch(setConnectedStatus())
-    }
+  return {
+    onLogin: (userInfo) => dispatch(receiveUserInfo(userInfo)),
+    onDeviceUpdate: (macAddress, message) => dispatch(receiveDeviceShadowUpdate(macAddress, message)),
+    onDeviceSubscription: (macAddress) => dispatch(setSubscriptionStatus(macAddress))
+  }
 }
 
 export default connect(undefined, mapDispatchToProps)(Login);

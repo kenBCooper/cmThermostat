@@ -3,7 +3,10 @@ import { connect } from 'react-redux';
 import { Table } from 'react-bootstrap';
 
 import LoadingIndicator from './LoadingIndicator';
-import { getZonesForCurrentSystem, isCurrentSystemCelsius } from '../util/deviceShadowUtil';
+import {
+  selectZonesForCurrentSystem,
+  selectIsCurrentSystemCelsius,
+} from '../selectors/AppSelectors';
 import { formatTemp } from '../util/tempUtil';
 import ThermostatActionIcon from './ThermostatActionIcon';
 import ZoneDetail from './ZoneDetail';
@@ -97,26 +100,21 @@ class ZoneList extends Component {
   }
 
   render() {
-    const zones = getZonesForCurrentSystem(this.props.deviceShadow);
-
-    if (!this.props.connected || !zones) {
-      return <LoadingIndicator />
-    } else {
-      const zonesData = this.mapZonesDataToDisplayGrid(zones);
-      return (
-        <div>
-          <Table className="custom-table">
-            {this.renderTableHeader(Object.values(ZONE_LIST_HEADERS))}
-            {this.renderTableBody(zonesData)}
-          </Table>
-          <ZoneDetail zoneData={zones[this.state.zoneDetailNumber]}
-                      zoneId={this.state.zoneDetailNumber}
-                      show={this.state.showZoneDetail}
-                      onHide={this.closeZoneDetail}
-                      isCelsius={this.props.isCelsius}/>
-        </div>
-      );
-    }
+    const zones = this.props.zones;
+    const zonesData = this.mapZonesDataToDisplayGrid(zones);
+    return (
+      <div>
+        <Table className="custom-table">
+          {this.renderTableHeader(Object.values(ZONE_LIST_HEADERS))}
+          {this.renderTableBody(zonesData)}
+        </Table>
+        <ZoneDetail zoneData={zones[this.state.zoneDetailNumber]}
+                    zoneId={this.state.zoneDetailNumber}
+                    show={this.state.showZoneDetail}
+                    onHide={this.closeZoneDetail}
+                    isCelsius={this.props.isCelsius}/>
+      </div>
+    );
   }
 
   renderTableHeader(headerItems) {
@@ -161,9 +159,8 @@ class ZoneList extends Component {
 
 const mapStateToProps = (state) => {
   return {
-    deviceShadow: state.shadow,
-    connected: state.connected,
-    isCelsius: isCurrentSystemCelsius(state.shadow),
+    zones: selectZonesForCurrentSystem(state),
+    isCelsius: selectIsCurrentSystemCelsius(state),
   }
 }
 

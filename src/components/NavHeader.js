@@ -1,7 +1,8 @@
 import React from 'react';
 import { withRouter } from 'react-router-dom'
+import { connect } from 'react-redux';
 
-import { getCurrentSystemNumber } from '../util/urlUtil';
+import { selectCurrentSystemNumber } from '../selectors/AppSelectors';
 
 import './NavHeader.css';
 
@@ -15,9 +16,9 @@ const NavHeader = (props) => {
     return props.location.pathname === path;
   }
 
-  const zonesPath = `/${getCurrentSystemNumber()}`;
-  const diagnosticsPath = `/${getCurrentSystemNumber()}/d`
-  const schedulePath = `/${getCurrentSystemNumber()}/s`
+  const zonesPath = '/z';
+  const diagnosticsPath = '/d';
+  const schedulePath = '/s';
 
   const applyClassIfCurrentSelection = (applyClass, baseClass, path) => {
     if (isCurrentPath(path)) {
@@ -32,7 +33,8 @@ const NavHeader = (props) => {
   }
 
   const getSystemName = () => {
-    const currentSystemNumber = getCurrentSystemNumber()
+    const currentSystemNumber = props.currentSystemNumber
+
     if (currentSystemNumber === 0) {
       return 'GEN X';
     } else {
@@ -61,4 +63,10 @@ const NavHeader = (props) => {
   )
 }
 
-export default withRouter(NavHeader);
+const mapStateToProps = (state) => {
+  return {
+    currentSystemNumber: selectCurrentSystemNumber(state),
+  }
+}
+
+export default withRouter(connect(mapStateToProps, undefined)(NavHeader));
