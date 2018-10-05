@@ -14,11 +14,11 @@ import {
 } from 'amazon-cognito-identity-js';
 import { awsUserPoolConfig } from '../aws-configuration.js'
 import { receiveUserInfo, receiveDeviceShadowUpdate, setSubscriptionStatus } from '../actions/AppActions';
-import { connectToDeviceShadow, subscribeToDevice } from '../util/deviceShadowUtil';
+import { connectToDeviceShadow, subscribeToDevices } from '../util/deviceShadowUtil';
 import './Login.css';
 import './Panel.css';
 
-const LOGIN_SUCCESS_REDIRECT = '/z';
+const LOGIN_SUCCESS_REDIRECT = '/zones';
 
 class Login extends Component {
   constructor(props) {
@@ -80,8 +80,8 @@ class Login extends Component {
         macList,
       });
 
-      subscribeToDevice(
-        macList[0],
+      subscribeToDevices(
+        macList,
         this.props.onDeviceSubscription,
         this.props.onDeviceUpdate,
       )

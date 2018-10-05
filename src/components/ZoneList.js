@@ -6,6 +6,7 @@ import LoadingIndicator from './LoadingIndicator';
 import {
   selectZonesForCurrentSystem,
   selectIsCurrentSystemCelsius,
+  selectNamesForCurrentSystem,
 } from '../selectors/AppSelectors';
 import { formatTemp } from '../util/tempUtil';
 import ThermostatActionIcon from './ThermostatActionIcon';
@@ -37,7 +38,7 @@ class ZoneList extends Component {
 
     Object.keys(zonesData).forEach((zoneNumber) => {
       mappedZoneData.push({
-        [ZONE_LIST_HEADERS.ZONE]: zoneNumber,
+        [ZONE_LIST_HEADERS.ZONE]: this.props.zoneNames[zoneNumber],
         [ZONE_LIST_HEADERS.TEMP]: formatTemp(
             zonesData[zoneNumber].currentTemp,
             this.props.isCelsius,
@@ -161,6 +162,7 @@ const mapStateToProps = (state) => {
   return {
     zones: selectZonesForCurrentSystem(state),
     isCelsius: selectIsCurrentSystemCelsius(state),
+    zoneNames: selectNamesForCurrentSystem(state),
   }
 }
 

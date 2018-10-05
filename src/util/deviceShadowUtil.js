@@ -9,20 +9,25 @@ import { STAT_PARSE_LIST, DIAGNOSTIC_PARSE_LIST } from './deviceShadowParseConfi
 import { DAY_NAMES, AM_PM_VALUES } from '../constants/ScheduleConstants';
 
 // 3 sec debounce per unique zone update.
-const UPDATE_DEBOUNCE_TIME = 3500;
+const UPDATE_DEBOUNCE_TIME = 1000;
 
-// Data structure for PENDING_UPDATES
+// // Data structure for PENDING_UPDATES
 // PENDING UPDATES = {
-//   systemId: {
-//     <V (vacation) or Z (zones)>: {
-//       timeout: window.timeout,
-//       payload: <updated device shadow object>
+//   macAddress: {
+//     systemNumber: {
+//       <V (vacation) or Z (zones) or C(config)>: {
+//         timeout: window.timeout,
+//         payload: <updated device shadow object>
+//       }
 //     }
 //   }
 // }
+
 const PENDING_UPDATES = {};
 const VACATION_UPDATE = 'V';
 const ZONE_UPDATE = 'Z';
+const CONFIG_UPDATE = 'C';
+const NAME_UPDATE = 'N';
 
 let mqttClient;
 let congnitoCredentials;
@@ -35,11 +40,13 @@ const updateRejectedTopicName = (macAddress) => {
   return `$aws/things/${macAddress}/shadow/update/rejected`;
 }
 
-const updateTopicName = () => {
-  const store = getStore();
-  const state = store.getState();
-  const currentGenXMacAddress = selectCurrentGenX(state);
-  return `$aws/things/${currentGenXMacAddress}/shadow/update`;
+// macAddress is an optional argument - if not included, the currently selected
+// genx/mac in the app will be used.
+const updateTopicName = (macAddress) => {
+  if (!macAddress) {
+    macAddress = getCurrentMacAddress();
+  }
+  return `$aws/things/${macAddress}/shadow/update`;
 }
 
 const getCurrentMacAddress = () => {
@@ -53,65 +60,157 @@ const createBaseRequestMessage = (systemNumber) => {
   return JSON.stringify({
     state: {
       reported: {
-        R: `${systemNumber},0,`
-      }
-    }
+        R: `${systemNumber},0,`,
+      },
+    },
   });
 }
 
-export const publishDeviceShadowZoneUpdate = (updatedShadow, systemId, zoneId) => {
+const createNameRequestMessage = (systemNumber) => {
+  return JSON.stringify({
+    state: {
+      desired: {
+        ZN: `${systemNumber},`,
+      },
+    },
+  });
+}
+
+const createNameNullMessage = (systemNumber) => {
+  return JSON.stringify({
+    state: {
+      desired: {
+        ZN: null,
+      },
+    },
+  });
+}
+
+const getPendingUpdate = (macAddress, systemNumber, updateKey) => {
+  const pendingUpdatesForMac = PENDING_UPDATES[macAddress] || {};
+  const pendingUpdatesForSystem = pendingUpdatesForMac[systemNumber] || {};
+  return pendingUpdatesForSystem[updateKey] || {};
+}
+
+const clearPendingUpdate = (macAddress, systemNumber, updateKey) => {
+  const pendingUpdatesForMac = PENDING_UPDATES[macAddress] || {};
+  const pendingUpdatesForSystem = pendingUpdatesForMac[systemNumber] || {};
+
+  PENDING_UPDATES[macAddress] = {
+    ...pendingUpdatesForMac,
+    [systemNumber]: {
+      ...pendingUpdatesForSystem,
+      [updateKey]: {},
+    },
+  };
+}
+
+const setPendingUpdate = (macAddress, systemNumber, updateKey, timeout, payload) => {
+  const pendingUpdatesForMac = PENDING_UPDATES[macAddress] || {};
+  const pendingUpdatesForSystem = pendingUpdatesForMac[systemNumber] || {};
+
+  PENDING_UPDATES[macAddress] = {
+    ...pendingUpdatesForMac,
+    [systemNumber]: {
+      ...pendingUpdatesForSystem,
+      [updateKey]: {
+        timeout,
+        payload,
+      },
+    },
+  };
+}
+
+export const publishDeviceShadowZoneUpdate = (updatedShadow, macAddress, systemNumber, zoneId) => {
   // If an update is pending for this specific system, replace it with the latest
   // update.
-  const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId][ZONE_UPDATE];
-  if (pendingUpdate && pendingUpdate.timeout) clearTimeout(pendingUpdate.timeout);
+  const pendingUpdate = getPendingUpdate(macAddress, systemNumber, ZONE_UPDATE);
+  if (pendingUpdate.timeout) clearTimeout(pendingUpdate.timeout);
 
   let nextUpdatePayload = getZoneUpdatePayload(updatedShadow, zoneId);
-  if (pendingUpdate && pendingUpdate.payload) {
+
+  if (pendingUpdate.payload) {
     nextUpdatePayload = mergeUpdatePayloads(nextUpdatePayload, pendingUpdate.payload);
   }
 
   const nextUpdate = setTimeout(() => {
     const updatePayload = {
       state: {
-          reported: nextUpdatePayload
+        reported: nextUpdatePayload
+      },
+    };
+
+    mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
+    clearPendingUpdate(macAddress, systemNumber, ZONE_UPDATE);
+  }, UPDATE_DEBOUNCE_TIME);
+
+  setPendingUpdate(macAddress, systemNumber, ZONE_UPDATE, nextUpdate, nextUpdatePayload);
+}
+
+export const publishDeviceShadowNameUpdate = (updatedShadow, macAddress, systemNumber, zoneId) => {
+  // If an update is pending for this specific system, replace it with the latest
+  // update.
+  const pendingUpdate = getPendingUpdate(macAddress, systemNumber, NAME_UPDATE);
+  if (pendingUpdate.timeout) clearTimeout(pendingUpdate.timeout);
+
+  let nextUpdatePayload = getNameUpdatePayload(updatedShadow, zoneId);
+
+  const nextUpdate = setTimeout(() => {
+    const updatePayload = {
+      state: {
+        desired: nextUpdatePayload
+      },
+    };
+
+    mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
+    clearPendingUpdate(macAddress, systemNumber, NAME_UPDATE);
+  }, UPDATE_DEBOUNCE_TIME);
+
+  setPendingUpdate(macAddress, systemNumber, NAME_UPDATE, nextUpdate, nextUpdatePayload);
+}
+
+export const publishDeviceShadowConfigUpdate = (updatedShadow, macAddress, systemNumber) => {
+  // If an update is pending for this specific system, replace it with the latest
+  // update.
+  const pendingUpdate = getPendingUpdate(macAddress, systemNumber, CONFIG_UPDATE);
+  if (pendingUpdate.timeout) clearTimeout(pendingUpdate.timeout);
+
+  const nextUpdatePayload = getConfigUpdatePayload(updatedShadow);
+
+  const nextUpdate = setTimeout(() => {
+    const updatePayload = {
+      state: {
+        reported: nextUpdatePayload
       }
     };
 
-    // For debugging:
-		// console.log("Published: ", updatePayload);
     mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
-    PENDING_UPDATES[systemId][ZONE_UPDATE] = {};
+    clearPendingUpdate(macAddress, systemNumber, CONFIG_UPDATE);
   }, UPDATE_DEBOUNCE_TIME);
 
-  if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = { Z: {} };
-  PENDING_UPDATES[systemId][ZONE_UPDATE].timeout = nextUpdate;
-  PENDING_UPDATES[systemId][ZONE_UPDATE].payload = nextUpdatePayload;
+  setPendingUpdate(macAddress, systemNumber, CONFIG_UPDATE, nextUpdate, nextUpdatePayload);
 }
 
-export const publishDeviceShadowVacationUpdate = (updatedShadow, systemId) => {
+export const publishDeviceShadowVacationUpdate = (updatedShadow, macAddress, systemNumber) => {
   // If an update is pending for this specific system, replace it with the latest
   // update.
-  const pendingUpdate = PENDING_UPDATES[systemId] && PENDING_UPDATES[systemId][VACATION_UPDATE];
-  if (pendingUpdate && pendingUpdate.timeout) clearTimeout(pendingUpdate.timeout);
+  const pendingUpdate = getPendingUpdate(macAddress, systemNumber, VACATION_UPDATE);
+  if (pendingUpdate.timeout) clearTimeout(pendingUpdate.timeout);
 
   const nextUpdatePayload = getVacUpdatePayload(updatedShadow);
 
   const nextUpdate = setTimeout(() => {
     const updatePayload = {
       state: {
-          reported: nextUpdatePayload
+        reported: nextUpdatePayload
       }
     };
 
-    // For debugging:
-		// console.log("Published: ", updatePayload);
     mqttClient.publish(updateTopicName(), JSON.stringify(updatePayload));
-    PENDING_UPDATES[systemId][VACATION_UPDATE] = {};
+    clearPendingUpdate(macAddress, systemNumber, VACATION_UPDATE);
   }, UPDATE_DEBOUNCE_TIME);
 
-	if (!PENDING_UPDATES[systemId]) PENDING_UPDATES[systemId] = { V: {} };
-	PENDING_UPDATES[systemId][VACATION_UPDATE].timeout = nextUpdate;
-  PENDING_UPDATES[systemId][VACATION_UPDATE].payload = nextUpdatePayload;
+  setPendingUpdate(macAddress, systemNumber, VACATION_UPDATE, nextUpdate, nextUpdatePayload);
 }
 
 const mergeUpdatePayloads = (newPayload, pendingPayload) => {
@@ -122,15 +221,15 @@ const mergeUpdatePayloads = (newPayload, pendingPayload) => {
 // Return the new raw shadow for storage.
 export const updateRawDeviceShadow = (rawShadow, updateShadowObject) => {
   Object.keys(rawShadow).forEach((key) => {
+    let rawValues = rawShadow[key];
+    if (rawValues.charAt(rawValues.length - 1) === ',') {
+      rawValues = rawValues.slice(0, -1);
+    }
+    const rawValuesArr = rawValues.split(',');
+
     if (key.charAt(0) === 'S') {
       const zoneNumber = parseInt(key.split('S')[1], 10);
       const zoneValues = updateShadowObject.zones[zoneNumber];
-
-      let rawValues = rawShadow[key];
-      if (rawValues.charAt(rawValues.length - 1) === ',') {
-        rawValues = rawValues.slice(0, -1);
-      }
-      const rawValuesArr = rawValues.split(',');
 
       Object.keys(STAT_PARSE_LIST).forEach((key) => {
         const valPosition = key;
@@ -148,12 +247,6 @@ export const updateRawDeviceShadow = (rawShadow, updateShadowObject) => {
 
 			const updateVacations = updateShadowObject.vacations;
 
-      let rawValues = rawShadow[key];
-      if (rawValues.charAt(rawValues.length - 1) === ',') {
-        rawValues = rawValues.slice(0, -1);
-      }
-      const rawValuesArr = rawValues.split(',');
-
 			for (let i=0; i < 20; i++) {
 				if (updateVacations[i]) {
 					rawValuesArr[SYS_OFFSET+3*i+LENGTH_OFFSET] = updateVacations[i].endDate.diff(updateVacations[i].startDate, 'days');
@@ -167,7 +260,14 @@ export const updateRawDeviceShadow = (rawShadow, updateShadowObject) => {
 			}
 
       rawShadow[key] = rawValuesArr.join(',') + ',';
-		}
+		} else if (key === 'C') {
+      rawValuesArr[10] = updateShadowObject.systemConfig.tempFormat;
+      rawShadow[key] = rawValuesArr.join(',') + ',';
+    } else if (key === 'N') {
+      const systemNumber = parseInt(rawShadow.N.split(',')[0], 10);
+      // updates handled by the backend lambda functions do not add a trailing comma - unlike the other updates.
+      rawShadow.N = `${systemNumber},${Object.values(updateShadowObject.names).join(',')}`;
+    }
   });
 
   return rawShadow;
@@ -209,6 +309,10 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
       const systemConfigData = parseSystemConfigurationData(valuesArr);
       parsedDeviceShadow.systemConfig = systemConfigData;
       systemNumber = valuesArr[0];
+    } else if (key === 'N') {
+      const namesData = parseNamesData(valuesArr);
+      parsedDeviceShadow.names = namesData;
+      systemNumber = valuesArr[0];
     } else {
       // It is important to always have the relevant system number, even if we have
       // an update containing an unexpected key.
@@ -222,28 +326,18 @@ export const parseDeviceShadow = (rawDeviceShadow) => {
   return parsedDeviceShadow;
 }
 
-export const subscribeToDevice = (macAddress, onSubscribe, onUpdate) => {
-  if (!macAddress) throw new Error('no mac address provided for device connection');
+export const subscribeToDevices = (macList, onSubscribe, onUpdate) => {
+  if (!macList || !macList.length) {
+    throw new Error('no mac address provided for device connection');
+  }
 
-  // if no mqtt client, make one.
   if (!mqttClient) {
     createMqttClientConnection(() => {
-      createDeviceSubscription(macAddress, onSubscribe, onUpdate);
-    })
+      createDeviceSubscriptions(macList, onSubscribe, onUpdate);
+    });
   } else {
-    // If not currently subscribed to the provided mac/device. Create subscriptions.
-    if (hasExistingSubscription) {
-      return;
-    } else {
-      createDeviceSubscription(macAddress, onSubscribe, onUpdate);
-    }
+    createDeviceSubscriptions(macList, onSubscribe, onUpdate);
   }
-}
-
-const hasExistingSubscription = (macAddress) => {
-  const store = getStore();
-  const state = store.getState();
-  return selectIsSubscribedToDevice(state, macAddress);
 }
 
 const createMqttClientConnection = (onConnect) => {
@@ -274,43 +368,61 @@ const createMqttClientConnection = (onConnect) => {
   }
 };
 
-const createDeviceSubscription = (macAddress, onSubscribe, onUpdate) => {
-  mqttClient.subscribe(updateAcceptedTopicName(macAddress));
-  mqttClient.subscribe(updateRejectedTopicName(macAddress));
+const createDeviceSubscriptions = (macList, onSubscribe, onUpdate) => {
+  macList.forEach((macAddress) => {
+    mqttClient.subscribe(updateAcceptedTopicName(macAddress));
+    mqttClient.subscribe(updateRejectedTopicName(macAddress));
 
-  mqttClient.on('message', (topic, message) => {
-    // For debugging
-    // console.log(`********* message received **********\n${topic}`);
-    // console.log(JSON.parse(message).state.reported);
+    mqttClient.on('message', (topic, message) => {
+      // For debugging
+      // console.log(`********* message received **********\n${topic}`);
+      // console.log(JSON.parse(message).state.reported);
 
-    if (topic === updateRejectedTopicName(macAddress)) {
-      console.log('update rejected!');
-      console.log(`${message.toString()}`);
+      if (topic === updateRejectedTopicName(macAddress)) {
+        console.log('update rejected!');
+        console.log(`${message.toString()}`);
 
-    } else if (topic === updateAcceptedTopicName(macAddress)) {
-      const messageJson = JSON.parse(message);
-      if (messageJson.state && messageJson.state.reported) {
-        const updatedShadowState = messageJson.state.reported
+      } else if (topic === updateAcceptedTopicName(macAddress)) {
+        const messageJson = JSON.parse(message);
+        if (messageJson.state && messageJson.state.reported) {
+          const updatedShadowState = messageJson.state.reported
 
-        // Do not update local state if the server is returning an empty update.
-        // This happens as the device shadow periodically clears its state.
-        if (Object.keys(updatedShadowState).every((key) => {
-          return updatedShadowState[key] === null;
-        })) return;
+          // Do not update local state if the server is returning an empty update.
+          // This happens as the device shadow periodically clears its state.
+          if (Object.keys(updatedShadowState).every((key) => {
+            return updatedShadowState[key] === null;
+          })) return;
 
-        // Do not update local state if the server is acknowledging a base request.
-        // Subsequent requests will contain the device shadow data needed. We know the server
-        // is responding to a base request if there is a R key in the payload with a value of:
-        // "<number>,0," - which is what the regex below tests for.
-        if (!!/[0-9]+,0,/.exec(updatedShadowState.R)) return;
+          // Do not update local state if the server is acknowledging a base request.
+          // Subsequent requests will contain the device shadow data needed. We know the server
+          // is responding to a base request if there is a R key in the payload with a value of:
+          // "<number>,0," - which is what the regex below tests for.
+          if (!!/[0-9]+,0,/.exec(updatedShadowState.R)) return;
 
-        onUpdate(macAddress, updatedShadowState);
+          onUpdate(macAddress, updatedShadowState);
+        }
       }
+    });
+
+    // Request base system and name data.
+    requestNamesForSystem(0, macAddress);
+    requestDeviceShadowForSystem(0, macAddress);
+
+    onSubscribe(macAddress);
+
+    // Now that we know the mac list, redefine the retry connection function to issue requests to the
+    // proper mqtt topics.
+    retryShadowConnection = () => {
+      macList.forEach((macAddress) => {
+        // Wait 3 seconds - this is the time it takes for the device shadow to clear its state. Then
+        // follow up with 2 base request messages. For some reason the base request message only seems
+        // to work if it is received by an empty device shadow.
+        requestNamesForSystem(0, macAddress);
+        window.setTimeout(
+          () => mqttClient.publish(updateTopicName(macAddress), createBaseRequestMessage(0, macAddress)), 3000);
+      });
     }
   });
-
-  mqttClient.publish(updateTopicName(), createBaseRequestMessage(0));
-  onSubscribe(macAddress);
 };
 
 const createMqttClient = (credentials, onConnect, onSubscribe) => {
@@ -326,19 +438,6 @@ const createMqttClient = (credentials, onConnect, onSubscribe) => {
     console.log('connected to iot mqtt websocket');
     onConnect();
   });
-}
-
-export const retryShadowConnection = () => {
-  if(!mqttClient) return;
-
-  // Wait 3 seconds - this is the time it takes for the device shadow to clear its state. Then
-  // follow up with 2 base request messages. For some reason the base request message only seems
-  // to work if it is received by an empty device shadow, and 2 messages seems to be more reliable
-  // than one. Not sure why...
-  window.setTimeout(
-    () => mqttClient.publish(updateTopicName(), createBaseRequestMessage(0)), 3000);
-  window.setTimeout(
-    () => mqttClient.publish(updateTopicName(), createBaseRequestMessage(0)), 4000);
 }
 
 const configureCognitoId = (onSuccess) => {
@@ -410,6 +509,15 @@ const parseSystemConfigurationData = (systemConfigValues) => {
   };
 }
 
+const parseNamesData = (namesValues) => {
+  const parsedNamesData = {};
+  namesValues.slice(1).forEach((value, index) => {
+    parsedNamesData[index] = value;
+  });
+
+  return parsedNamesData;
+}
+
 const parseVacationData = (vacationValues) => {
 	const SYS_OFFSET = 1;
 	const LENGTH_OFFSET = 0;
@@ -447,32 +555,54 @@ const parseVacationData = (vacationValues) => {
 // Get specific zone update payload, needed so we only send exactly what
 // has updated. Payload size must be kept to a minimum.
 const getZoneUpdatePayload = (rawShadow, zoneId) => {
-  let zoneUpdatePayload = {};
-  Object.keys(rawShadow).forEach((key) => {
-    if (key.charAt(0) === 'S') {
-      const zoneNumber = key.split('S')[1];
-      if (zoneNumber === zoneId.toString()) {
-        zoneUpdatePayload[key] = rawShadow[key];
-      }
-    }
-  });
-
-  return zoneUpdatePayload;
+  const rawShadowKeyForZone = `S${zoneId}`;
+  return {
+    [rawShadowKeyForZone]: rawShadow[rawShadowKeyForZone] || {},
+  };
 }
 
-// Get specific vacation update payload, needed so we only send exactly what
-// has updated. Payload size must be kept to a minimum.
+const getNameUpdatePayload = (rawShadow) => {
+  return {
+    ZU: rawShadow['N'] || {},
+  }
+}
+
+const getConfigUpdatePayload = (rawShadow) => {
+  return {
+    C: rawShadow['C'] || {},
+  };
+}
+
 const getVacUpdatePayload = (rawShadow) => {
-  let updatePayload = {};
-  Object.keys(rawShadow).forEach((key) => {
-    if (key === 'V') {
-        updatePayload[key] = rawShadow[key];
-		}
-	});
-
-  return updatePayload;
+  return {
+    V: rawShadow['V'] || {},
+  };
 }
 
-export const requestDeviceShadowForSystem = (systemNumber) => {
-  mqttClient && mqttClient.publish(updateTopicName(), createBaseRequestMessage(systemNumber));
+// macAddress is an optional argument - if not included, the currently selected
+// genx/mac in the app will be used.
+export const requestDeviceShadowForSystem = (systemNumber, macAddress) => {
+  if (mqttClient) {
+    mqttClient.publish(updateTopicName(macAddress), createBaseRequestMessage(systemNumber));
+    // If the first request did not work - which happens quite a bit... - wait 3 seconds.
+    // this is the time it takes for the device shadow to clear its state. Then
+    // follow up with a base request message.
+    window.setTimeout(
+      () => mqttClient.publish(updateTopicName(macAddress), createBaseRequestMessage(0)), 3500);
+  }
 }
+
+// macAddress is an optional argument - if not included, the currently selected
+// genx/mac in the app will be used.
+export const requestNamesForSystem = (systemNumber, macAddress) => {
+  if (mqttClient) {
+    mqttClient.publish(updateTopicName(macAddress), createNameRequestMessage(systemNumber));
+    // This is required for the name backend to stop sending name messages.
+    mqttClient.publish(updateTopicName(macAddress), createNameNullMessage());
+    // Send a second after timeout to ensure the backend stops sending name messages.
+    setTimeout(() => mqttClient.publish(updateTopicName(macAddress), createNameNullMessage()), 500);
+  }
+}
+
+// This function redefined once device subscriptions are set up.
+export let retryShadowConnection = () => null;

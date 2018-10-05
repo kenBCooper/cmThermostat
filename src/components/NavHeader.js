@@ -2,7 +2,7 @@ import React from 'react';
 import { withRouter } from 'react-router-dom'
 import { connect } from 'react-redux';
 
-import { selectCurrentSystemNumber } from '../selectors/AppSelectors';
+import { selectCurrentSystemName } from '../selectors/AppSelectors';
 
 import './NavHeader.css';
 
@@ -16,9 +16,10 @@ const NavHeader = (props) => {
     return props.location.pathname === path;
   }
 
-  const zonesPath = '/z';
-  const diagnosticsPath = '/d';
-  const schedulePath = '/s';
+  const zonesPath = '/zones';
+  const diagnosticsPath = '/diagnostics';
+  const schedulePath = '/schedule';
+  const settingsPath = '/settings';
 
   const applyClassIfCurrentSelection = (applyClass, baseClass, path) => {
     if (isCurrentPath(path)) {
@@ -32,20 +33,10 @@ const NavHeader = (props) => {
     return isCurrentPath(path) ? (<div className="selected-arrow"></div>) : '';
   }
 
-  const getSystemName = () => {
-    const currentSystemNumber = props.currentSystemNumber
-
-    if (currentSystemNumber === 0) {
-      return 'GEN X';
-    } else {
-      return `RM${currentSystemNumber}`;
-    }
-  }
-
   return (
     <div className="nav-header">
       <ul className="nav-header-list">
-        <li className="nav-header-list-item nav-header-system-name"><i>{getSystemName()}:</i></li>
+        <li className="nav-header-list-item nav-header-system-name"><i>{props.currentSystemName}:</i></li>
         <li className={applyClassIfCurrentSelection(" selected", "nav-header-list-item", zonesPath)}>
           <i><a href={zonesPath} onClick={handleNavigation}>Zones</a></i>
           {renderSelectionArrow(zonesPath)}
@@ -58,6 +49,10 @@ const NavHeader = (props) => {
           <i><a href={schedulePath} onClick={handleNavigation}>Schedule</a></i>
           {renderSelectionArrow(schedulePath)}
         </li>
+        <li className={applyClassIfCurrentSelection(" selected", "nav-header-list-item", settingsPath)}>
+          <i><a href={settingsPath} onClick={handleNavigation}>Settings</a></i>
+          {renderSelectionArrow(settingsPath)}
+        </li>
       </ul>
     </div>
   )
@@ -65,7 +60,7 @@ const NavHeader = (props) => {
 
 const mapStateToProps = (state) => {
   return {
-    currentSystemNumber: selectCurrentSystemNumber(state),
+    currentSystemName: selectCurrentSystemName(state),
   }
 }
 

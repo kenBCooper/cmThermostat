@@ -1,0 +1,104 @@
+.settings-section-label {
+  font-size: 16px;
+  color: #424B54;
+  margin: 12px 0px 0px 20px;
+}
+
+.temp-format-container {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.temp-format-label {
+  font-size: 24px;
+  margin: 10px;
+  padding-bottom: 6px;
+  color: #dadada;
+}
+
+.selected-format {
+  color: #424B54;
+}
+
+/* The switch - the box around the slider */
+.temp-format-switch {
+  position: relative;
+  display: inline-block;
+  width: 55px;
+  height: 29px;
+}
+
+/* Hide default HTML checkbox */
+.temp-format-switch input {display:none;}
+
+/* The slider */
+.temp-format-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #55aedc;
+  transition: .4s;
+}
+
+.temp-format-slider:before {
+  position: absolute;
+  content: "";
+  height: 21px;
+  width: 21px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:focus + .temp-format-slider {
+  box-shadow: 0 0 1px #55aedc;
+}
+
+input:checked + .temp-format-slider:before {
+  transform: translateX(26px);
+}
+
+.name-list-row {
+  font-size: 16px;
+  padding: 10px 30px;
+}
+
+.name-list-row:hover {
+  cursor: pointer;
+  background-color: #dadada;
+}
+
+.name-list-row:hover .name-list-edit-button {
+  visibility: initial;
+}
+
+.name-list-label {
+  display: inline-block;
+  max-width: calc(100% - 100px);
+}
+
+.name-list-edit-button {
+  display: inline-block;
+  padding-left: 10px;
+  font-weight: 500;
+  visibility: hidden;
+}
+
+.name-list-edit-button:hover {
+  color: black;
+}
+
+.name-list-textEdit-container {
+  display: inline-block;
+}
+
+.name-list-textEdit {
+  width: 225px;
+  padding-left: 4px;
+  border: 1px solid #9a9b9c;
+}

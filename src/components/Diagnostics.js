@@ -41,6 +41,12 @@ const SA_ZONE_STATUS_DISPLAY_STRINGS = {
   3: 'STAT LOW BAT',
 }
 
+const ZONE_LOCK_STATUS_DISPLAY_STRINGS = {
+  0: 'UNLOCKED',
+  1: 'LOCKED',
+  2: 'PARTIAL LOCK',
+};
+
 const STANDALONE_VALUE = '2';
 const LONG_TEXT_CUTOFF = 4;
 
@@ -54,14 +60,16 @@ const Diagnostics = (props) => {
   // (currLockStatus), and rely on the function to automatically toggle to the opposite
   // lock status, or explicitly pass in a lock status to set the zone to (setToLockStatus).
   const toggleZoneLock = (zoneId, currLockStatus, setToLockStatus) => {
-    let nextLockStatus;
+    let nextLockStatus = currLockStatus;
     if (setToLockStatus) {
       nextLockStatus = setToLockStatus;
     } else {
-      nextLockStatus = currLockStatus === '0' ? '1' : '0';
+      if (currLockStatus === '0') nextLockStatus = '1';
+      if (currLockStatus === '1') nextLockStatus = '2';
+      if (currLockStatus === '2') nextLockStatus = '0';
     }
 
-    props.onZoneUpdate( nextLockStatus, 'lockStatus', zoneId );
+    props.onZoneUpdate(nextLockStatus, 'lockStatus', zoneId);
   }
 
 	const unlockAllZones = () => {
@@ -206,16 +214,25 @@ const Diagnostics = (props) => {
 						const zoneStatusDiagnosticKey = `errorCodeZone${zoneId}`;
 						const zoneStatusDiagnosticCode = diagnostics[zoneStatusDiagnosticKey];
 						const zoneStatusDisplay = getZoneStatusDisplay(zones[zoneId], zoneStatusDiagnosticCode);
-						const zoneStatusLocked = zones[zoneId].lockStatus;
+						const zoneLockStatus = zones[zoneId].lockStatus;
             const zonePriority = zones[zoneId].priorityVote;
             const zoneCall = zones[zoneId].zoneCall;
+
+            const zoneLockStatusString = ZONE_LOCK_STATUS_DISPLAY_STRINGS[zoneLockStatus];
+
 						return(
 							<tr key={index}>
                 <td className="custom-table-cell">{`${zoneId}`}</td>
 								<td className="custom-table-cell">{getZoneVoteString(zonePriority, zoneCall)}</td>
-								<td onClick={() => toggleZoneLock(zoneId, zoneStatusLocked)}
-                    className="custom-table-cell zone-lock">
-                  <LockIcon lockStatus={zoneStatusLocked}/>
+								<td
+                  onClick={() => toggleZoneLock(zoneId, zoneLockStatus)}
+                  className="custom-table-cell zone-lock"
+                >
+                  <span
+                    className={`diagnostics-lockStatus diagnostics-lockStatus-${zoneLockStatus}`}
+                  >
+                    {zoneLockStatusString}
+                  </span>
                 </td>
 								<td className="custom-table-cell zone-status">{`${zoneStatusDisplay}`}</td>
 							</tr>

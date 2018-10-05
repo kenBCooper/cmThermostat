@@ -10,6 +10,8 @@
 
   display: block;
   text-align: center;
+
+  min-height: 38px;
 }
 
 .custom-list {

@@ -3,8 +3,11 @@ import {
   parseDeviceShadow,
   updateRawDeviceShadow,
   publishDeviceShadowZoneUpdate,
+  publishDeviceShadowNameUpdate,
   publishDeviceShadowVacationUpdate,
+  publishDeviceShadowConfigUpdate,
 } from '../util/deviceShadowUtil';
+import { selectNamesForSystem } from '../selectors/AppSelectors';
 
 const DEFAULT_STATE = {
   connection: {
@@ -32,12 +35,18 @@ const appReducer = (state = DEFAULT_STATE, action) => {
       return receiveDeviceShadowUpdate(state, action);
     case Actions.UPDATE_ZONE:
       return updateZone(state, action);
+    case Actions.UPDATE_ZONE_NAME:
+      return updateZoneName(state, action);
     case Actions.UPDATE_VACATION_SCHEDULE:
       return updateVacation(state, action);
+    case Actions.UPDATE_TEMP_FORMAT:
+      return updateTempFormat(state, action);
     case Actions.RESET_SHADOW:
       return resetDeviceShadow(state, action);
     case Actions.SET_CURRENT_SYSTEM:
       return setCurrentSystem(state, action);
+    case Actions.SET_CURRENT_GENX:
+      return setCurrentGenX(state, action);
     case Actions.SET_SUBSCRIPTION_STATUS:
       return setSubscriptionStatus(state, action);
     default:
@@ -101,6 +110,10 @@ const receiveDeviceShadowUpdate = (state, action) => {
       ...existingShadowForSystem.systemConfig,
       ...updatedShadowState.systemConfig,
     },
+    names: {
+      ...existingShadowForSystem.names,
+      ...updatedShadowState.names,
+    }
   };
 
   const newSystemRawShadow = {
@@ -169,11 +182,61 @@ const updateZone = (state, action) => {
     existingRawShadowForSystem, updatedSystemShadow);
 
   // Publish an update to the external device shadow using our updated raw state.
-  publishDeviceShadowZoneUpdate(updatedSystemRawShadow, currentSystemNumber, updateZoneId);
+  publishDeviceShadowZoneUpdate(updatedSystemRawShadow, currentGenX, currentSystemNumber, updateZoneId);
 
   // Optimistically update local state with changes while update to device shadow
   // is pending.
 
+  return {
+    ...state,
+    devices: {
+      ...state.devices,
+      [currentGenX]: {
+        ...existingDeviceState,
+        systems: {
+          ...existingDeviceState.systems,
+          [currentSystemNumber]: {
+            ...existingSystemState,
+            shadow: updatedSystemShadow,
+            rawShadow: updatedSystemRawShadow,
+          },
+        },
+      },
+    },
+  };
+}
+
+const updateZoneName = (state, action) => {
+  const updatedName = action.payload.name;
+  const zoneToUpdate = action.payload.zoneNumber;
+
+  const currentSystemNumber = state.currentSystem;
+  const currentGenX = state.currentGenX;
+
+  const existingDeviceState = state.devices[currentGenX] || EMPTY_DEVICE_STATE;
+  const existingSystemState = existingDeviceState.systems[currentSystemNumber] || EMPTY_SYSTEM_STATE;
+  const existingShadowForSystem = existingSystemState.shadow || {};
+  const existingRawShadowForSystem = existingSystemState.rawShadow || {};
+
+  const existingNamesDataWithDefaults = selectNamesForSystem(state, currentGenX, currentSystemNumber);
+
+  const updatedSystemShadow = {
+    ...existingShadowForSystem,
+    names: {
+      ...existingNamesDataWithDefaults,
+      [zoneToUpdate]: updatedName,
+    },
+  };
+
+  // Update the raw device shadow.
+  const updatedSystemRawShadow = updateRawDeviceShadow(
+    existingRawShadowForSystem, updatedSystemShadow);
+
+  // Publish an update to the external device shadow using our updated raw state.
+  publishDeviceShadowNameUpdate(updatedSystemRawShadow, currentGenX, currentSystemNumber);
+
+  // // Optimistically update local state with changes while update to device shadow
+  // // is pending.
   return {
     ...state,
     devices: {
@@ -227,7 +290,7 @@ const updateVacation = (state, action) => {
     existingRawShadowForSystem, updatedSystemShadow);
 
   // Publish an update to the external device shadow using our updated raw state.
-  publishDeviceShadowVacationUpdate(updatedSystemRawShadow, currentSystemNumber);
+  publishDeviceShadowVacationUpdate(updatedSystemRawShadow, currentGenX, currentSystemNumber);
 
   // Optimistically update local state with changes while update to device shadow
   // is pending.
@@ -250,11 +313,59 @@ const updateVacation = (state, action) => {
   };
 }
 
+const updateTempFormat = (state, action) => {
+  const tempFormat = action.payload.tempFormat;
+  const currentSystemNumber = state.currentSystem;
+  const currentGenX = state.currentGenX;
+
+  const existingDeviceState = state.devices[currentGenX] || EMPTY_DEVICE_STATE;
+  const existingSystemState = existingDeviceState.systems[currentSystemNumber] || EMPTY_SYSTEM_STATE;
+  const existingShadowForSystem = existingSystemState.shadow || {};
+  const existingRawShadowForSystem = existingSystemState.rawShadow || {};
+  const existingConfigDataForShadow = existingShadowForSystem.systemConfig || {};
+
+  const updatedSystemShadow = {
+    ...existingShadowForSystem,
+    systemConfig: {
+      ...existingConfigDataForShadow,
+      tempFormat,
+    },
+  };
+
+  // Update the raw device shadow.
+  const updatedSystemRawShadow = updateRawDeviceShadow(
+    existingRawShadowForSystem, updatedSystemShadow);
+
+  // Publish an update to the external device shadow using our updated raw state.
+  publishDeviceShadowConfigUpdate(updatedSystemRawShadow, currentGenX, currentSystemNumber);
+
+  // Optimistically update local state with changes while update to device shadow
+  // is pending.
+  return {
+    ...state,
+    devices: {
+      ...state.devices,
+      [currentGenX]: {
+        ...existingDeviceState,
+        systems: {
+          ...existingDeviceState.systems,
+          [currentSystemNumber]: {
+            ...existingSystemState,
+            shadow: updatedSystemShadow,
+            // rawShadow: updatedSystemRawShadow,
+          },
+        },
+      },
+    },
+  };
+}
+
 const resetDeviceShadow = (state, action) => {
   let resetShadow = { ...DEFAULT_STATE };
 
   resetShadow.user = { ...state.user };
-  resetShadow.currentGenX = state.user.macList[0];
+  resetShadow.currentGenX = state.currentGenX;
+  resetShadow.currentSystem = 0;
 
   return resetShadow;
 }
@@ -263,6 +374,13 @@ const setCurrentSystem = (state, action) => {
   return {
     ...state,
     currentSystem: action.payload.currentSystem,
+  };
+}
+
+const setCurrentGenX = (state, action) => {
+  return {
+    ...state,
+    currentGenX: action.payload.currentGenX,
   };
 }
 

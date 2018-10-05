@@ -6,39 +6,6 @@ import NavSidebar from './NavSidebar';
 import './AppPanel.css';
 
 class AppPanel extends Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      maxSidebarHeight: undefined,
-    }
-  }
-
-  componentDidMount() {
-    window.addEventListener('resize', () => {
-      this.setState({
-        maxSidebarHeight: this.refs.appPanel.clientHeight,
-      });
-    });
-  }
-
-  componentDidUpdate() {
-    const currAppPanelHeight = this.refs.appPanel.clientHeight;
-    if (this.state.maxSidebarHeight !== currAppPanelHeight) {
-      this.setState({
-        maxSidebarHeight: this.refs.appPanel.clientHeight,
-      });
-    }
-  }
-
-  componentWillUnmount() {
-    window.removeEventListener('resize', () => {
-      this.setState({
-        maxSidebarHeight: this.refs.appPanel.clientHeight,
-      });
-    });
-  }
-
   render() {
     return (
       <div className={this.props.isLoggedIn ? "app-panel-container" : ""}>
@@ -50,7 +17,7 @@ class AppPanel extends Component {
           ) : null}
           {this.props.isLoggedIn ? (
             <div className="app-panel-sidebar">
-              <NavSidebar maxHeight={this.state.maxSidebarHeight}/>
+              <NavSidebar />
             </div>
           ) : null}
           <div className="app-panel-workspace">

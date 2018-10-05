@@ -100,3 +100,25 @@
   border-radius: 0px 10px 10px 0px;
   margin-left: -1px;
 }
+
+.diagnostics-lockStatus {
+  padding: 4px;
+  border: 1px solid #dfdfdf;
+  border-radius: 4px;
+}
+
+.diagnostics-lockStatus:hover {
+  border: 1px solid #9a9b9c;
+}
+
+.diagnostics-lockStatus-0 {
+  background-color: #ffffff;
+}
+
+.diagnostics-lockStatus-1 {
+  background-color: #dfdfdf;
+}
+
+.diagnostics-lockStatus-2 {
+  background-color: #dfdfdf;
+}

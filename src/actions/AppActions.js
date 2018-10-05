@@ -30,13 +30,32 @@ export const updateZone = (value, updateAttribute, zoneId) => {
   };
 }
 
+export const  updateZoneName = (zoneNumber, name) => {
+  return {
+    type: Actions.UPDATE_ZONE_NAME,
+    payload: {
+      zoneNumber,
+      name,
+    }
+  }
+}
+
 export const updateVacationSchedule = (vacationKey, dates) => {
   return {
     type: Actions.UPDATE_VACATION_SCHEDULE,
 		payload: {
 			vacationKey,
-			dates
+			dates,
 		}
+  };
+}
+
+export const updateTempFormat = (tempFormat) => {
+  return {
+    type: Actions.UPDATE_TEMP_FORMAT,
+    payload: {
+      tempFormat,
+    },
   };
 }
 
@@ -60,6 +79,15 @@ export const setCurrentSystem = (currentSystem) => {
     type: Actions.SET_CURRENT_SYSTEM,
     payload: {
       currentSystem,
+    },
+  };
+}
+
+export const setCurrentGenX = (currentGenX) => {
+  return {
+    type: Actions.SET_CURRENT_GENX,
+    payload: {
+      currentGenX,
     },
   };
 }

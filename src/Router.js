@@ -7,8 +7,11 @@ import AppPanel from './components/AppPanel';
 import ZoneList from './components/ZoneList';
 import Diagnostics from './components/Diagnostics';
 import Schedule from './components/Schedule';
+import Settings from './components/Settings';
 import Login from './components/Login';
 import LoadingIndicator from './components/LoadingIndicator';
+
+import './components/List.css';
 
 const Router = (props) => {
   const isLoggedIn = isAuthenticated(props.userInfo);
@@ -26,18 +29,23 @@ const Router = (props) => {
             <PrivateRoute
               isLoggedIn={isLoggedIn}
               isLoading={isCurrentSystemLoading}
-              path="/d"
+              path="/diagnostics"
               component={Diagnostics}/>
             <PrivateRoute
               isLoggedIn={isLoggedIn}
               isLoading={isCurrentSystemLoading}
-              path="/s"
+              path="/schedule"
               component={Schedule}/>
             <PrivateRoute
               isLoggedIn={isLoggedIn}
               isLoading={isCurrentSystemLoading}
-              path="/z"
+              path="/zones"
               component={ZoneList}/>
+            <PrivateRoute
+              isLoggedIn={isLoggedIn}
+              isLoading={isCurrentSystemLoading}
+              path="/settings"
+              component={Settings}/>
             <PrivateRoute
               isLoggedIn={isLoggedIn}
               isLoading={isCurrentSystemLoading}
@@ -93,7 +101,12 @@ const PrivateRoute = ({ component: Component, ...rest }) => {
     }
 
     if (isLoading) {
-      return <LoadingIndicator />;
+      return (
+        <div>
+          <div className="custom-list-header"></div>
+          <LoadingIndicator />
+        </div>
+      );
     }
 
     return <Component {...props}/>;
